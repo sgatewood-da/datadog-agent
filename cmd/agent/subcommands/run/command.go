@@ -53,6 +53,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/otelcol"
 	otelcollector "github.com/DataDog/datadog-agent/comp/otelcol/collector"
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcclient"
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
 	"github.com/DataDog/datadog-agent/pkg/api/healthprobe"
 	"github.com/DataDog/datadog-agent/pkg/autodiscovery/providers"
@@ -176,6 +177,7 @@ func run(log log.Component,
 	capture replay.Component,
 	serverDebug dogstatsdDebug.Component,
 	forwarder defaultforwarder.Component,
+	wmeta workloadmeta.Component,
 	rcclient rcclient.Component,
 	metadataRunner runner.Component,
 	demux *aggregator.AgentDemultiplexer,
@@ -224,7 +226,7 @@ func run(log log.Component,
 		}
 	}()
 
-	if err := startAgent(cliParams, log, flare, telemetry, sysprobeconfig, server, capture, serverDebug, rcclient, logsAgent, forwarder, sharedSerializer, otelcollector); err != nil {
+	if err := startAgent(cliParams, log, flare, telemetry, sysprobeconfig, server, capture, serverDebug, wmeta, rcclient, logsAgent, forwarder, sharedSerializer, otelcollector); err != nil {
 		return err
 	}
 
@@ -254,6 +256,7 @@ func StartAgentWithDefaults(ctxChan <-chan context.Context) (<-chan error, error
 			serverDebug dogstatsdDebug.Component,
 			capture replay.Component,
 			rcclient rcclient.Component,
+			wmeta workloadmeta.Component,
 			forwarder defaultforwarder.Component,
 			logsAgent util.Optional[logsAgent.Component],
 			metadataRunner runner.Component,
@@ -263,7 +266,7 @@ func StartAgentWithDefaults(ctxChan <-chan context.Context) (<-chan error, error
 
 			defer StopAgentWithDefaults(server)
 
-			err := startAgent(&cliParams{GlobalParams: &command.GlobalParams{}}, log, flare, telemetry, sysprobeconfig, server, capture, serverDebug, rcclient, logsAgent, forwarder, sharedSerializer, otelcollector)
+			err := startAgent(&cliParams{GlobalParams: &command.GlobalParams{}}, log, flare, telemetry, sysprobeconfig, server, capture, serverDebug, wmeta, rcclient, logsAgent, forwarder, sharedSerializer, otelcollector)
 			if err != nil {
 				return err
 			}
@@ -383,6 +386,7 @@ func startAgent(
 	server dogstatsdServer.Component,
 	capture replay.Component,
 	serverDebug dogstatsdDebug.Component,
+	wmeta workloadmeta.Component,
 	rcclient rcclient.Component,
 	logsAgent util.Optional[logsAgent.Component],
 	sharedForwarder defaultforwarder.Component,
@@ -516,6 +520,9 @@ func startAgent(
 			}
 		}
 	}
+
+	// create and setup the Autoconfig instance
+	common.LoadComponents(common.MainCtx, wmeta, pkgconfig.Datadog.GetString("confd_path"))
 
 	if logsAgent, ok := logsAgent.Get(); ok {
 		// TODO: (components) - once adScheduler is a component, inject it into the logs agent.

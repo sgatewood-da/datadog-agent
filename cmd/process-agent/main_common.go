@@ -31,6 +31,7 @@ import (
 	runnerComp "github.com/DataDog/datadog-agent/comp/process/runner"
 	"github.com/DataDog/datadog-agent/comp/process/types"
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcclient"
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	ddconfig "github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/pidfile"
 	"github.com/DataDog/datadog-agent/pkg/process/metadata/workloadmeta/collector"
@@ -44,10 +45,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/version"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
-
-	// register all workloadmeta collectors
-	_ "github.com/DataDog/datadog-agent/pkg/workloadmeta/collectors"
 )
 
 const (
@@ -215,9 +212,10 @@ type miscDeps struct {
 	fx.In
 	Lc fx.Lifecycle
 
-	Config   config.Component
-	Syscfg   sysprobeconfig.Component
-	HostInfo hostinfo.Component
+	Config       config.Component
+	Syscfg       sysprobeconfig.Component
+	HostInfo     hostinfo.Component
+	WorkloadMeta workloadmeta.Component
 }
 
 // initMisc initializes modules that cannot, or have not yet been componetized.
@@ -234,13 +232,18 @@ func initMisc(deps miscDeps) error {
 	}
 
 	// Setup workloadmeta
-	var workloadmetaCollectors workloadmeta.CollectorCatalog
-	if deps.Config.GetBool("process_config.remote_workloadmeta") {
-		workloadmetaCollectors = workloadmeta.RemoteCatalog
-	} else {
-		workloadmetaCollectors = workloadmeta.NodeAgentCatalog
-	}
-	store := workloadmeta.CreateGlobalStore(workloadmetaCollectors)
+	//
+	// TODO(components): the code commented below can probably be removed soon once
+	//                   initialization and registration of workload collectors is
+	//                   handled as expected in the workloadmeta component.
+	//
+	// var workloadmetaCollectors workloadmeta.CollectorCatalog
+	// if deps.Config.GetBool("process_config.remote_workloadmeta") {
+	// 	workloadmetaCollectors = workloadmeta.RemoteCatalog
+	// } else {
+	// 	workloadmetaCollectors = workloadmeta.NodeAgentCatalog
+	// }
+	// store := workloadmeta.CreateGlobalStore(workloadmetaCollectors)
 
 	// Setup remote tagger
 	var t tagger.Tagger
@@ -252,17 +255,20 @@ func initMisc(deps miscDeps) error {
 			t = remote.NewTagger(options)
 		}
 	} else {
-		t = local.NewTagger(store)
+		t = local.NewTagger(deps.WorkloadMeta)
 	}
 	tagger.SetDefaultTagger(t)
 
 	processCollectionServer := collector.NewProcessCollector(deps.Config, deps.Syscfg)
 
+	// TODO(components): still unclear how the initialization of workoadmeta
+	//                   store and tagger should be performed.
 	// appCtx is a context that cancels when the OnStop hook is called
 	appCtx, stopApp := context.WithCancel(context.Background())
 	deps.Lc.Append(fx.Hook{
 		OnStart: func(startCtx context.Context) error {
-			store.Start(appCtx)
+			// This might likely have to be done elsewhere.
+			deps.WorkloadMeta.Start(appCtx)
 
 			err := tagger.Init(startCtx)
 			if err != nil {
@@ -276,7 +282,7 @@ func initMisc(deps miscDeps) error {
 			}
 
 			if collector.Enabled(deps.Config) {
-				err := processCollectionServer.Start(appCtx, store)
+				err := processCollectionServer.Start(appCtx, deps.WorkloadMeta)
 				if err != nil {
 					return err
 				}

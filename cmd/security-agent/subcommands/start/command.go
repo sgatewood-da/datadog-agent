@@ -35,6 +35,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/telemetry"
 	"github.com/DataDog/datadog-agent/comp/forwarder"
 	"github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder"
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
 	pkgconfig "github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/config/settings"
@@ -49,7 +50,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/profiling"
 	"github.com/DataDog/datadog-agent/pkg/util/startstop"
 	"github.com/DataDog/datadog-agent/pkg/version"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
 )
 
 type cliParams struct {
@@ -146,7 +146,7 @@ var errAllComponentsDisabled = errors.New("all security-agent component are disa
 var errNoAPIKeyConfigured = errors.New("no API key configured")
 
 // RunAgent initialized resources and starts API server
-func RunAgent(ctx context.Context, log log.Component, config config.Component, sysprobeconfig sysprobeconfig.Component, telemetry telemetry.Component, forwarder defaultforwarder.Component, pidfilePath string) (err error) {
+func RunAgent(ctx context.Context, log log.Component, config config.Component, sysprobeconfig sysprobeconfig.Component, telemetry telemetry.Component, wmeta workloadmeta.Component, forwarder defaultforwarder.Component, pidfilePath string) (err error) {
 	if err := util.SetupCoreDump(config); err != nil {
 		log.Warnf("Can't setup core dumps: %v, core dumps might not be available after a crash", err)
 	}
@@ -237,14 +237,17 @@ func RunAgent(ctx context.Context, log log.Component, config config.Component, s
 		return log.Criticalf("Error creating statsd Client: %s", err)
 	}
 
-	workloadmetaCollectors := workloadmeta.NodeAgentCatalog
-	if config.GetBool("security_agent.remote_workloadmeta") {
-		workloadmetaCollectors = workloadmeta.RemoteCatalog
-	}
+	// TODO(components): This all will happen in the component instantiation
+	//                   code.
+	//
+	// workloadmetaCollectors := workloadmeta.NodeAgentCatalog
+	// if config.GetBool("security_agent.remote_workloadmeta") {
+	// 	workloadmetaCollectors = workloadmeta.RemoteCatalog
+	// }
 
-	// Start workloadmeta store
-	store := workloadmeta.CreateGlobalStore(workloadmetaCollectors)
-	store.Start(ctx)
+	// // Start workloadmeta store
+	// store := workloadmeta.CreateGlobalStore(workloadmetaCollectors)
+	// store.Start(ctx)
 
 	// Initialize the remote tagger
 	if config.GetBool("security_agent.remote_tagger") {

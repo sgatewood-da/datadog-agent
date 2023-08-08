@@ -19,9 +19,11 @@ import (
 	"github.com/DataDog/datadog-agent/cmd/manager"
 	remotecfg "github.com/DataDog/datadog-agent/cmd/trace-agent/config/remote"
 	"github.com/DataDog/datadog-agent/comp/trace/config"
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	coreconfig "github.com/DataDog/datadog-agent/pkg/config"
 	rc "github.com/DataDog/datadog-agent/pkg/config/remote"
 	"github.com/DataDog/datadog-agent/pkg/pidfile"
+	agentrt "github.com/DataDog/datadog-agent/pkg/runtime"
 	"github.com/DataDog/datadog-agent/pkg/tagger"
 	"github.com/DataDog/datadog-agent/pkg/tagger/local"
 	"github.com/DataDog/datadog-agent/pkg/tagger/remote"
@@ -38,12 +40,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/profiling"
 	"github.com/DataDog/datadog-agent/pkg/version"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
-
-	agentrt "github.com/DataDog/datadog-agent/pkg/runtime"
-
-	// register all workloadmeta collectors
-	_ "github.com/DataDog/datadog-agent/pkg/workloadmeta/collectors"
 )
 
 const messageAgentDisabled = `trace-agent not enabled. Set the environment variable
@@ -54,7 +50,7 @@ to your datadog.yaml. Exiting...`
 const stackDepth = 3
 
 // Run is the entrypoint of our code, which starts the agent.
-func runAgent(ctx context.Context, cliParams *RunParams, cfg config.Component) error {
+func runAgent(ctx context.Context, cliParams *RunParams, cfg config.Component, wmeta workloadmeta.Component) error {
 
 	tracecfg := cfg.Object()
 	err := info.InitInfo(tracecfg) // for expvar & -info option
@@ -149,10 +145,10 @@ func runAgent(ctx context.Context, cliParams *RunParams, cfg config.Component) e
 	// starts the local tagger if apm_config says so, or if starting the
 	// remote tagger has failed.
 	if !remoteTagger {
-		store := workloadmeta.CreateGlobalStore(workloadmeta.NodeAgentCatalog)
-		store.Start(ctx)
+		// TODO(components): verify the workloadmeta injected has the right
+		//                   catalog.
 
-		tagger.SetDefaultTagger(local.NewTagger(store))
+		tagger.SetDefaultTagger(local.NewTagger(wmeta))
 		if err := tagger.Init(ctx); err != nil {
 			log.Errorf("failed to start the tagger: %s", err)
 		}
