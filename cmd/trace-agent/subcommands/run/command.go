@@ -17,6 +17,7 @@ import (
 	"github.com/DataDog/datadog-agent/cmd/trace-agent/subcommands"
 	coreconfig "github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/trace/config"
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
@@ -64,6 +65,7 @@ func runFx(ctx context.Context, cliParams *RunParams, defaultConfPath string) er
 		config.Module,
 		fx.Supply(coreconfig.NewAgentParamsWithSecrets(cliParams.ConfPath)),
 		coreconfig.Module,
+		workloadmeta.Module,
 	)
 }
 

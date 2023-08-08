@@ -52,7 +52,7 @@ func runTraceAgent(cliParams *RunParams, defaultConfPath string) error {
 	return runFx(ctx, cliParams, defaultConfPath)
 }
 
-func Run(cs *contextSupplier, cliParams *RunParams, config config.Component) error {
+func Run(cs *contextSupplier, cliParams *RunParams, config config.Component, wmeta workloadmeta.Component) error {
 	// Entrypoint here
 
 	ctx, cancelFunc := context.WithCancel(cs.ctx)
@@ -64,5 +64,5 @@ func Run(cs *contextSupplier, cliParams *RunParams, config config.Component) err
 	}()
 
 	// Invoke the Agent
-	return runAgent(ctx, cliParams, config)
+	return runAgent(ctx, cliParams, config, wmeta)
 }

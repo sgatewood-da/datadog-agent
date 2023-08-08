@@ -12,6 +12,7 @@ import (
 
 	"github.com/DataDog/datadog-agent/cmd/trace-agent/subcommands"
 	"github.com/DataDog/datadog-agent/comp/trace/config"
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/trace/watchdog"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +36,7 @@ func runTraceAgent(cliParams *RunParams, defaultConfPath string) error {
 	return runFx(ctx, cliParams, defaultConfPath)
 }
 
-func Run(cs *contextSupplier, cliParams *RunParams, config config.Component) error {
+func Run(cs *contextSupplier, cliParams *RunParams, config config.Component, wmeta workloadmeta.Component) error {
 	ctx, cancelFunc := context.WithCancel(cs.ctx)
 
 	// Handle stops properly
@@ -44,6 +45,6 @@ func Run(cs *contextSupplier, cliParams *RunParams, config config.Component) err
 		handleSignal(cancelFunc)
 	}()
 
-	return runAgent(ctx, cliParams, config)
+	return runAgent(ctx, cliParams, config, wmeta)
 
 }
