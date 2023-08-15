@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics/provider"
 	kutil "github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/pointer"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
 
 	"k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
@@ -49,7 +49,7 @@ func init() {
 
 type kubeletCollector struct {
 	kubeletClient kutil.KubeUtilInterface
-	metadataStore workloadmeta.Store
+	metadataStore workloadmeta.Component
 	statsCache    provider.Cache
 	refreshLock   sync.Mutex
 }
@@ -67,6 +67,7 @@ func newKubeletCollector() (*kubeletCollector, error) {
 	return &kubeletCollector{
 		kubeletClient: client,
 		statsCache:    *provider.NewCache(kubeletCacheGCInterval),
+		// TODO(components): stop using globals, rely on injected workloadmeta component.
 		metadataStore: workloadmeta.GetGlobalStore(),
 	}, nil
 }

@@ -13,18 +13,18 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/autodiscovery/common/utils"
 	"github.com/DataDog/datadog-agent/pkg/autodiscovery/integration"
 	"github.com/DataDog/datadog-agent/pkg/autodiscovery/providers/names"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
 )
 
 // ContainerConfigProvider implements the ConfigProvider interface for both pods and containers
 type ContainerConfigProvider struct {
-	workloadmetaStore workloadmeta.Store
+	workloadmetaStore workloadmeta.Component
 	configErrors      map[string]ErrorMsgSet                   // map[entity name]ErrorMsgSet
 	configCache       map[string]map[string]integration.Config // map[entity name]map[config digest]integration.Config
 	mu                sync.RWMutex
@@ -34,6 +34,8 @@ type ContainerConfigProvider struct {
 // and pods
 func NewContainerConfigProvider(*config.ConfigurationProviders) (ConfigProvider, error) {
 	return &ContainerConfigProvider{
+		// TODO(components): references to globals should be removed and injected components
+		//                   should be used instead.
 		workloadmetaStore: workloadmeta.GetGlobalStore(),
 		configCache:       make(map[string]map[string]integration.Config),
 		configErrors:      make(map[string]ErrorMsgSet),

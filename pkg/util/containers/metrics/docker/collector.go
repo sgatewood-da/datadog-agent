@@ -16,12 +16,12 @@ import (
 
 	"github.com/docker/docker/api/types"
 
+	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics/provider"
 	"github.com/DataDog/datadog-agent/pkg/util/docker"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/pointer"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
 )
 
 const (
@@ -47,7 +47,7 @@ func init() {
 type dockerCollector struct {
 	du            *docker.DockerUtil
 	pidCache      *provider.Cache
-	metadataStore workloadmeta.Store
+	metadataStore workloadmeta.Component
 }
 
 func newDockerCollector() (*dockerCollector, error) {
@@ -61,8 +61,9 @@ func newDockerCollector() (*dockerCollector, error) {
 	}
 
 	return &dockerCollector{
-		du:            du,
-		pidCache:      provider.NewCache(pidCacheGCInterval),
+		du:       du,
+		pidCache: provider.NewCache(pidCacheGCInterval),
+		// TODO(components): remove use of global, use injected component instead
 		metadataStore: workloadmeta.GetGlobalStore(),
 	}, nil
 }
