@@ -155,7 +155,9 @@ upload_dependencies_arm64:
     - echo "$ARCH-istance-ip" $INSTANCE_IP
     - scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE $DD_AGENT_TESTING_DIR/$ARCHIVE_NAME ubuntu@$INSTANCE_IP:/opt/kernel-version-testing/
     # build connector
+    - pushd $CI_PROJECT_DIR/test/new-e2e
     - GOOS=linux GOARCH=$GOARCH go build -o $CI_PROJECT_DIR/connector $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
+    - popd
   variables:
     DEPENDENCIES: $DD_AGENT_TESTING_DIR/$ARCH/tests
     EMBEDDED_BIN: opt/datadog-agent/embedded/bin
