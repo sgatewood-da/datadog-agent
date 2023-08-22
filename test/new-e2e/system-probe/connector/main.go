@@ -71,6 +71,7 @@ func main() {
 
 	cmd.Command = os.Getenv("VM_CMD")
 	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err := communicator.Start(ctx, &cmd); err != nil {
 		log.Fatal(err)
 	}
