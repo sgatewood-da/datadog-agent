@@ -157,10 +157,7 @@ upload_dependencies_arm64:
     # build connector
     - pushd $CI_PROJECT_DIR/test/new-e2e
     # build connector for runner
-    - |
-      if [ "$ARCH" == "x86_64" ]; then
-        GOOS=linux go build -o $CI_PROJECT_DIR/connector-gitlab $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
-      fi
+    - go build -o $CI_PROJECT_DIR/connector-gitlab $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
     # build connector for metal instance
     - GOOS=linux GOARCH=$GOARCH go build -o $CI_PROJECT_DIR/connector-$ARCH $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
     - popd
@@ -336,6 +333,8 @@ kernel_matrix_testing_setup_env:
     - MICRO_VM_NAME=$(cat $CI_PROJECT_DIR/stack.outputs | grep $ARCH-$TAG | cut -d ' ' -f 1)
     # ssh into each micro-vm and run initialization script. This script will also run the tests.
     - export VM_CMD="VM_CMD='bash /root/fetch_dependencies.sh ${ARCH} && /micro-vm-init.sh ${GO_VERSION} ${RETRY} ${ARCH}' /home/ubuntu/connector-${ARCH} -host ${MICRO_VM_IP} -user root -ssh-file /home/kernel-version-testing/ddvm_rsa"
+    - export DD_API_KEY=$(aws ssm get-parameter --region us-east-1 --name ci.datadog-agent.datadog_api_key --with-decryption --query "Parameter.Value" --out text)
+    - export DD_SITE="datadoghq.com"
     - $CI_PROJECT_DIR/connector-gitlab -host $INSTANCE_IP -user ubuntu -ssh-file $AWS_EC2_SSH_KEY_FILE
     - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "scp -o StrictHostKeyChecking=no -i /home/kernel-version-testing/ddvm_rsa root@${MICRO_VM_IP}:/ci-visibility/junit.tar.gz /home/ubuntu/junit.tar.gz"
     - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "scp -o StrictHostKeyChecking=no -i /home/kernel-version-testing/ddvm_rsa root@${MICRO_VM_IP}:/ci-visibility/testjson.tar.gz /home/ubuntu/testjson.tar.gz"
