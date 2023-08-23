@@ -157,7 +157,10 @@ upload_dependencies_arm64:
     # build connector
     - pushd $CI_PROJECT_DIR/test/new-e2e
     # build connector for runner
-    - GOOS=linux go build -o $CI_PROJECT_DIR/connector-gitlab $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
+    - |
+      if [ "$ARCH" == "x86_64" ]; then
+        GOOS=linux go build -o $CI_PROJECT_DIR/connector-gitlab $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
+      fi
     # build connector for metal instance
     - GOOS=linux GOARCH=$GOARCH go build -o $CI_PROJECT_DIR/connector-$ARCH $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
     - popd
