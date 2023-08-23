@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const VMCmd = "VM_CMD"
+
 type Args struct {
 	host                    string
 	user                    string
@@ -69,7 +71,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cmd.Command = os.Getenv("VM_CMD")
+	cmd.Command = os.Getenv(VMCmd)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := communicator.Start(ctx, &cmd); err != nil {
