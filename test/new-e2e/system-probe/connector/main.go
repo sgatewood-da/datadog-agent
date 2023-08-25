@@ -17,14 +17,13 @@ import (
 )
 
 const (
-	FailConfig    = "config_fail"
-	FailConnect   = "connect_fail"
-	FailStart     = "start_fail"
-	FailWait      = "wait_fail"
-	Success       = "success"
-	Fail          = "fail"
-	VMCmd         = "VM_CMD"
-	ConnectorType = "CONNECTOR_TYPE"
+	FailConfig  = "config_fail"
+	FailConnect = "connect_fail"
+	FailStart   = "start_fail"
+	FailWait    = "wait_fail"
+	Success     = "success"
+	Fail        = "fail"
+	VMCmd       = "VM_CMD"
 )
 
 var metrics = map[string]string{
@@ -69,16 +68,17 @@ type ConnectorInfo struct {
 }
 
 func getConnectorInfo() (ConnectorInfo, error) {
-	connectorType, ok := os.LookupEnv(ConnectorType)
-	if !ok {
-		return ConnectorInfo{}, fmt.Errorf("no connector type provided")
+	connectorType := "vm"
+	if _, ok := os.LookupEnv("GITLAB_CI"); ok {
+		connectorType = "gitlab"
 	}
+
 	if _, ok := metrics[connectorType]; !ok {
 		return ConnectorInfo{}, fmt.Errorf("unknown connector type: %s", connectorType)
 	}
 
 	return ConnectorInfo{
-		connectorHost: os.Getenv("$CI_JOB_ID"),
+		connectorHost: os.Getenv("CI_JOB_ID"),
 		connectorType: connectorType,
 	}, nil
 }
