@@ -154,10 +154,10 @@ upload_dependencies_arm64:
     - scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE $DD_AGENT_TESTING_DIR/$ARCHIVE_NAME ubuntu@$INSTANCE_IP:/opt/kernel-version-testing/
     # build connector
     - pushd $CI_PROJECT_DIR/test/new-e2e
-    - go build -o $CI_PROJECT_DIR/connector $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
+    - go build -o $CI_PROJECT_DIR/connector-${ARCH} $CI_PROJECT_DIR/test/new-e2e/system-probe/connector/main.go
     - popd
     # upload connector to metal instance
-    - scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE $CI_PROJECT_DIR/connector ubuntu@$INSTANCE_IP:/home/ubuntu
+    - scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE $CI_PROJECT_DIR/connector-${ARCH} ubuntu@$INSTANCE_IP:/home/ubuntu/connector
   variables:
     DEPENDENCIES: $DD_AGENT_TESTING_DIR/$ARCH/tests
     EMBEDDED_BIN: opt/datadog-agent/embedded/bin
@@ -173,7 +173,7 @@ upload_dependencies_arm64:
   artifacts:
     when: always
     paths:
-      - $CI_PROJECT_DIR/connector
+      - $CI_PROJECT_DIR/connector-${ARCH}
 
 upload_system_probe_tests_x64:
   extends:
@@ -307,6 +307,7 @@ kernel_matrix_testing_setup_env:
   stage: kernel_matrix_testing
   allow_failure: true
   image: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/test-infra-definitions/runner:$TEST_INFRA_DEFINITIONS_BUILDIMAGES
+  tags: ["arch:amd64"]
   rules:
     !reference [ .on_system_probe_changes_or_manual ]
   variables:
@@ -331,7 +332,7 @@ kernel_matrix_testing_setup_env:
     # ssh into each micro-vm and run initialization script. This script will also run the tests.
     - export VM_CMD="VM_CMD='bash /root/fetch_dependencies.sh ${ARCH} && /micro-vm-init.sh ${GO_VERSION} ${RETRY} ${ARCH}' /home/ubuntu/connector -host ${MICRO_VM_IP} -user root -ssh-file /home/kernel-version-testing/ddvm_rsa"
     - export DD_SITE="datadoghq.com"
-    - $CI_PROJECT_DIR/connector -host $INSTANCE_IP -user ubuntu -ssh-file $AWS_EC2_SSH_KEY_FILE
+    - $CI_PROJECT_DIR/connector-x86_64 -host $INSTANCE_IP -user ubuntu -ssh-file $AWS_EC2_SSH_KEY_FILE
     - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "scp -o StrictHostKeyChecking=no -i /home/kernel-version-testing/ddvm_rsa root@${MICRO_VM_IP}:/ci-visibility/junit.tar.gz /home/ubuntu/junit.tar.gz"
     - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "scp -o StrictHostKeyChecking=no -i /home/kernel-version-testing/ddvm_rsa root@${MICRO_VM_IP}:/ci-visibility/testjson.tar.gz /home/ubuntu/testjson.tar.gz"
     - scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP:/home/ubuntu/testjson.tar.gz $DD_AGENT_TESTING_DIR/
@@ -342,7 +343,6 @@ kernel_matrix_testing_run_tests_x64:
   extends:
     - .kernel_matrix_testing_run_tests
   needs: ["kernel_matrix_testing_setup_env", "upload_dependencies_x64", "upload_system_probe_tests_x64", "upload_minimized_btfs_x64"]
-  tags: ["arch:amd64"]
   timeout: 3h
   variables:
     ARCH: "x86_64"
@@ -353,8 +353,7 @@ kernel_matrix_testing_run_tests_x64:
 kernel_matrix_testing_run_tests_arm64:
   extends:
     - .kernel_matrix_testing_run_tests
-  needs: ["kernel_matrix_testing_setup_env", "upload_dependencies_arm64", "upload_system_probe_tests_arm64", "upload_minimized_btfs_arm64"]
-  tags: ["arch:arm64"]
+  needs: ["kernel_matrix_testing_setup_env", "upload_dependencies_arm64", "upload_system_probe_tests_x64", "upload_system_probe_tests_arm64", "upload_minimized_btfs_arm64"]
   timeout: 3h
   variables:
     ARCH: "arm64"
