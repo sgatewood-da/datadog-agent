@@ -182,6 +182,11 @@ func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricP
 }
 
 func submitExecutionMetric(cinfo ConnectorInfo, failType, status string) error {
+	if _, ok := os.LookupEnv("DD_API_KEY"); !ok {
+		fmt.Fprintf(os.Stderr, "skipping sending metric because DD_API_KEY not present")
+		return nil
+	}
+
 	metricBody := buildMetric(cinfo, failType, status)
 
 	ctx := datadog.NewDefaultContext(context.Background())
