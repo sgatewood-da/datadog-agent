@@ -12,7 +12,7 @@ import (
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadog"
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV2"
-	sshtools "github.com/scylladb/go-sshtools"
+	"github.com/scylladb/go-sshtools"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -62,7 +62,7 @@ func readArgs() *Args {
 }
 
 type ConnectorInfo struct {
-	// For gitlab runnner this will be the job id
+	// For gitlab runner this will be the job id
 	// For metal instance this will be empty
 	connectorHost string
 	connectorType string
@@ -73,14 +73,7 @@ func getConnectorInfo() (ConnectorInfo, error) {
 	if !ok {
 		return ConnectorInfo{}, fmt.Errorf("no connector type provided")
 	}
-
-	ok = false
-	for ct, _ := range metrics {
-		if connectorType == ct {
-			ok = true
-		}
-	}
-	if !ok {
+	if _, ok := metrics[connectorType]; !ok {
 		return ConnectorInfo{}, fmt.Errorf("unknown connector type: %s", connectorType)
 	}
 
@@ -106,53 +99,58 @@ func sshCommunicator(args *Args, sshKey []byte) (*sshtools.Communicator, error) 
 }
 
 func main() {
-	var failType string
-	var cmd sshtools.Cmd
-
-	args := readArgs()
-	status := Fail
-
-	cinfo, err := getConnectorInfo()
-	if err != nil {
+	if err := run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func run() (err error) {
+	args := readArgs()
+	cinfo, err := getConnectorInfo()
+	if err != nil {
+		return fmt.Errorf("get connector info: %s", err)
+	}
+	var cmd sshtools.Cmd
 	key, err := os.ReadFile(args.sshFilePath)
 	if err != nil {
-		log.Fatalf("unable to read private key: %v", err)
+		return fmt.Errorf("read private key: %s", err)
 	}
+
+	var failType string
+	status := Fail
+	defer func() {
+		if serr := submitExecutionMetric(cinfo, failType, status); serr != nil {
+			err = serr
+		}
+	}()
 
 	communicator, err := sshCommunicator(args, key)
-	ctx := context.Background()
 	if err != nil {
 		failType = FailConfig
-		goto fail
+		return fmt.Errorf("communicator: %s", err)
 	}
 
+	ctx := context.Background()
 	if err := communicator.Connect(ctx); err != nil {
 		failType = FailConnect
-		goto fail
+		return fmt.Errorf("connect: %s", err)
 	}
 
 	cmd.Command = os.Getenv(VMCmd)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := communicator.Start(ctx, &cmd); err != nil {
-		failType = FailConnect
-		goto fail
+		failType = FailStart
+		return fmt.Errorf("communicator start: %s", err)
 	}
 
 	if err := cmd.Wait(); err != nil {
 		failType = FailWait
-		goto fail
+		return fmt.Errorf("wait: %s", err)
 	}
 
 	status = Success
-fail:
-	if err := SubmitExecutionMetric(cinfo, failType, status); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Fatal(err)
+	return nil
 }
 
 func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricPayload {
@@ -183,7 +181,7 @@ func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricP
 	}
 }
 
-func SubmitExecutionMetric(cinfo ConnectorInfo, failType, status string) error {
+func submitExecutionMetric(cinfo ConnectorInfo, failType, status string) error {
 	metricBody := buildMetric(cinfo, failType, status)
 
 	ctx := datadog.NewDefaultContext(context.Background())
