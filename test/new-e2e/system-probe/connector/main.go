@@ -193,8 +193,8 @@ func SubmitExecutionMetric(cinfo ConnectorInfo, failType, status string) error {
 	resp, r, err := api.SubmitMetrics(ctx, metricBody, *datadogV2.NewSubmitMetricsOptionalParameters())
 
 	if err != nil {
-		fmt.Errorf("error when calling `MetricsApi.SubmitMetrics`: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+		return fmt.Errorf("error when calling `MetricsApi.SubmitMetrics`: %v\n", err)
 	}
 
 	responseContent, _ := json.MarshalIndent(resp, "", "  ")
