@@ -23,7 +23,6 @@ const (
 	FailWait    = "wait_fail"
 	Success     = "success"
 	Fail        = "fail"
-	VMCmd       = "VM_CMD"
 )
 
 var metrics = map[string]string{
@@ -38,6 +37,7 @@ type Args struct {
 	serverKeepAliveInterval time.Duration
 	serverKeepAliveMaxCount int
 	sshFilePath             string
+	vmCommand               string
 }
 
 func readArgs() *Args {
@@ -47,6 +47,7 @@ func readArgs() *Args {
 	serverAlivePtr := flag.Int("server-alive-interval", 5, "Interval at which to send keep alive messages")
 	serverAliveCountPtr := flag.Int("server-alive-count", 560, "Maximum keep alive messages to send before disconnecting upon no reply")
 	sshFilePathPtr := flag.String("ssh-file", "", "Path to private ssh key")
+	vmCmd := flag.String("vm-cmd", "", "command to run on VM")
 
 	flag.Parse()
 
@@ -57,6 +58,7 @@ func readArgs() *Args {
 		serverKeepAliveInterval: time.Duration(*serverAlivePtr) * time.Second,
 		serverKeepAliveMaxCount: *serverAliveCountPtr,
 		sshFilePath:             *sshFilePathPtr,
+		vmCommand:               *vmCmd,
 	}
 }
 
@@ -136,7 +138,7 @@ func run() (err error) {
 		return fmt.Errorf("connect: %s", err)
 	}
 
-	cmd.Command = os.Getenv(VMCmd)
+	cmd.Command = args.vmCommand
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := communicator.Start(ctx, &cmd); err != nil {
