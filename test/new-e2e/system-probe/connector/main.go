@@ -155,8 +155,10 @@ func run() (err error) {
 
 func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricPayload {
 	tags := []string{
-		fmt.Sprintf("error:%s", failType),
 		fmt.Sprintf("status:%s", status),
+	}
+	if failType != "" {
+		tags = append(tags, fmt.Sprintf("error:%s", failType))
 	}
 	return datadogV2.MetricPayload{
 		Series: []datadogV2.MetricSeries{
