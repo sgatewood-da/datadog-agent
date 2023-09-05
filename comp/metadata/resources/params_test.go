@@ -3,21 +3,14 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-package host
+package resources
 
 import (
 	"testing"
 
-	"github.com/shirou/gopsutil/v3/host"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFillOsVersion(t *testing.T) {
-	stats := &systemStats{}
-	info, _ := host.Info()
-	fillOsVersion(stats, info)
-	assert.Len(t, stats.Nixver, 3)
-	assert.NotEmpty(t, stats.Nixver[0])
-	assert.NotEmpty(t, stats.Nixver[1])
-	assert.Empty(t, stats.Nixver[2])
+func Test(t *testing.T) {
+	assert.True(t, Disabled().Disabled)
 }

@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
-package common
+package utils
 
 import (
 	"github.com/DataDog/datadog-agent/pkg/config"
@@ -11,17 +11,21 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/version"
 )
 
-// CachePrefix is the common root to use to prefix all the cache
-// keys for any metadata value
-const CachePrefix = "metadata"
+// CommonPayload handles the JSON unmarshalling of the metadata payload
+type CommonPayload struct {
+	APIKey           string `json:"apiKey"`
+	AgentVersion     string `json:"agentVersion"`
+	UUID             string `json:"uuid"`
+	InternalHostname string `json:"internalHostname"`
+}
 
-// GetPayload fills and return the common metadata payload
-func GetPayload(hostname string) *Payload {
-	return &Payload{
+// GetCommonPayload fills and return the common metadata payload
+func GetCommonPayload(hostname string, conf config.ConfigReader) *CommonPayload {
+	return &CommonPayload{
 		// olivier: I _think_ `APIKey` is only a legacy field, and
 		// is not actually used by the backend
 		AgentVersion:     version.AgentVersion,
-		APIKey:           configUtils.SanitizeAPIKey(config.Datadog.GetString("api_key")),
+		APIKey:           configUtils.SanitizeAPIKey(conf.GetString("api_key")),
 		UUID:             getUUID(),
 		InternalHostname: hostname,
 	}
