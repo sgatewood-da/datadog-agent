@@ -14,10 +14,14 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
+	"github.com/DataDog/datadog-agent/cmd/agent/common/path"
 	"github.com/DataDog/datadog-agent/cmd/trace-agent/subcommands"
+	"github.com/DataDog/datadog-agent/comp/core"
 	coreconfig "github.com/DataDog/datadog-agent/comp/core/config"
+	corelog "github.com/DataDog/datadog-agent/comp/core/log"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors"
 	"github.com/DataDog/datadog-agent/comp/trace/config"
-	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
@@ -63,8 +67,17 @@ func runFx(ctx context.Context, cliParams *RunParams, defaultConfPath string) er
 		fx.Supply(&contextSupplier{ctx: ctx}),
 		fx.Supply(cliParams),
 		config.Module,
-		fx.Supply(coreconfig.NewAgentParamsWithSecrets(cliParams.ConfPath)),
-		coreconfig.Module,
+		// TODO(components): use bundle
+		fx.Supply(core.BundleParams{
+			ConfigParams: coreconfig.NewAgentParamsWithSecrets(cliParams.ConfPath),
+			LogParams:    corelog.LogForDaemon("TRACE", "log_file", path.DefaultLogFile),
+		}),
+		core.Bundle,
+
+		// setup workloadmeta
+		collectors.GetCatalog(),
+		fx.Supply(workloadmeta.Params{AgentType: workloadmeta.NodeAgent}),
+		fx.Supply(context.Background()),
 		workloadmeta.Module,
 	)
 }

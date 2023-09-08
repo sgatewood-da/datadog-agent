@@ -7,8 +7,6 @@ package run
 
 import (
 	"context"
-
-	tracecfg "github.com/DataDog/datadog-agent/pkg/trace/config"
 )
 
 type service struct {

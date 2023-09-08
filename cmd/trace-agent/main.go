@@ -10,11 +10,14 @@ import (
 
 	"github.com/DataDog/datadog-agent/cmd/internal/runcmd"
 	"github.com/DataDog/datadog-agent/cmd/trace-agent/command"
+	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 )
 
 const defaultLogFile = "/var/log/datadog/trace-agent.log"
 
 func main() {
+	flavor.SetFlavor(flavor.TraceAgent)
+
 	os.Args = command.FixDeprecatedFlags(os.Args, os.Stdout)
 
 	os.Exit(runcmd.Run(command.MakeRootCommand(defaultLogFile)))

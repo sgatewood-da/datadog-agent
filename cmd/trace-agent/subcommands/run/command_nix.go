@@ -11,8 +11,8 @@ import (
 	"context"
 
 	"github.com/DataDog/datadog-agent/cmd/trace-agent/subcommands"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
 	"github.com/DataDog/datadog-agent/comp/trace/config"
-	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/trace/watchdog"
 	"github.com/spf13/cobra"
 )
