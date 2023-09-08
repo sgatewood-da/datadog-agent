@@ -30,6 +30,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/core/sysprobeconfig"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
 	"github.com/DataDog/datadog-agent/comp/forwarder"
 	"github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder"
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
@@ -117,6 +118,11 @@ func MakeCommand(globalParamsGetter func() GlobalParams) *cobra.Command {
 					SysprobeConfigParams: sysprobeconfig.NewParams(sysprobeconfig.WithSysProbeConfFilePath(globalParams.SysProbeConfFilePath)),
 					LogParams:            log.LogForOneShot(globalParams.LoggerName, "off", true)}),
 				core.Bundle,
+
+				workloadmeta.Module,
+				fx.Supply(workloadmeta.NewParams()),
+				fx.Supply(context.Background()),
+
 				forwarder.Bundle,
 				fx.Supply(defaultforwarder.Params{UseNoopForwarder: true}),
 			)
@@ -159,7 +165,7 @@ func MakeCommand(globalParamsGetter func() GlobalParams) *cobra.Command {
 	return cmd
 }
 
-func run(log log.Component, config config.Component, sysprobeconfig sysprobeconfig.Component, forwarder defaultforwarder.Component, cliParams *cliParams) error {
+func run(log log.Component, config config.Component, sysprobeconfig sysprobeconfig.Component, wmeta workloadmeta.Component, forwarder defaultforwarder.Component, cliParams *cliParams) error {
 	previousIntegrationTracing := false
 	previousIntegrationTracingExhaustive := false
 	if cliParams.generateIntegrationTraces {
@@ -194,7 +200,7 @@ func run(log log.Component, config config.Component, sysprobeconfig sysprobeconf
 	opts.UseNoopOrchestratorForwarder = true
 	demux := aggregator.InitAndStartAgentDemultiplexer(log, forwarder, opts, hostnameDetected)
 
-	common.LoadComponents(context.Background(), aggregator.GetSenderManager(), pkgconfig.Datadog.GetString("confd_path"))
+	common.LoadComponents(context.Background(), aggregator.GetSenderManager(), wmeta, pkgconfig.Datadog.GetString("confd_path"))
 	common.AC.LoadAndRun(context.Background())
 
 	// Create the CheckScheduler, but do not attach it to
@@ -223,11 +229,11 @@ func run(log log.Component, config config.Component, sysprobeconfig sysprobeconf
 			fmt.Println("Please consider using the 'jmx' command instead of 'check jmx'")
 			selectedChecks := []string{cliParams.checkName}
 			if cliParams.checkRate {
-				if err := standalone.ExecJmxListWithRateMetricsJSON(selectedChecks, config.GetString("log_level"), allConfigs, aggregator.GetSenderManager()); err != nil {
+				if err := standalone.ExecJmxListWithRateMetricsJSON(wmeta, selectedChecks, config.GetString("log_level"), allConfigs, aggregator.GetSenderManager()); err != nil {
 					return fmt.Errorf("while running the jmx check: %v", err)
 				}
 			} else {
-				if err := standalone.ExecJmxListWithMetricsJSON(selectedChecks, config.GetString("log_level"), allConfigs, aggregator.GetSenderManager()); err != nil {
+				if err := standalone.ExecJmxListWithMetricsJSON(wmeta, selectedChecks, config.GetString("log_level"), allConfigs, aggregator.GetSenderManager()); err != nil {
 					return fmt.Errorf("while running the jmx check: %v", err)
 				}
 			}

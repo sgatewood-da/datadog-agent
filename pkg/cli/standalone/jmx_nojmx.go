@@ -10,21 +10,22 @@ package standalone
 import (
 	"fmt"
 
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
 	"github.com/DataDog/datadog-agent/pkg/autodiscovery/integration"
 )
 
 // ExecJMXCommandConsole is not supported when the 'jmx' build tag isn't included
-func ExecJMXCommandConsole(command string, selectedChecks []string, logLevel string, configs []integration.Config, senderManager sender.SenderManager) error {
+func ExecJMXCommandConsole(wmeta workloadmeta.Component, command string, selectedChecks []string, logLevel string, configs []integration.Config, senderManager sender.SenderManager) error {
 	return fmt.Errorf("not supported: the Agent is compiled without the 'jmx' build tag")
 }
 
 // ExecJmxListWithMetricsJSON is not supported when the 'jmx' build tag isn't included
-func ExecJmxListWithMetricsJSON(selectedChecks []string, logLevel string, configs []integration.Config, senderManager sender.SenderManager) error {
+func ExecJmxListWithMetricsJSON(wmeta workloadmeta.Component, selectedChecks []string, logLevel string, configs []integration.Config, senderManager sender.SenderManager) error {
 	return fmt.Errorf("not supported: the Agent is compiled without the 'jmx' build tag")
 }
 
 // ExecJmxListWithRateMetricsJSON is not supported when the 'jmx' build tag isn't included
-func ExecJmxListWithRateMetricsJSON(selectedChecks []string, logLevel string, configs []integration.Config, senderManager sender.SenderManager) error {
+func ExecJmxListWithRateMetricsJSON(wmeta workloadmeta.Component, selectedChecks []string, logLevel string, configs []integration.Config, senderManager sender.SenderManager) error {
 	return fmt.Errorf("not supported: the Agent is compiled without the 'jmx' build tag")
 }
