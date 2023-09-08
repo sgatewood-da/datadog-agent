@@ -33,9 +33,10 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/core/sysprobeconfig"
 	"github.com/DataDog/datadog-agent/comp/core/telemetry"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors"
 	"github.com/DataDog/datadog-agent/comp/forwarder"
 	"github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder"
-	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
 	pkgconfig "github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/config/settings"
@@ -78,8 +79,24 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 					LogParams:            log.LogForDaemon(command.LoggerName, "security_agent.log_file", pkgconfig.DefaultSecurityAgentLogFile),
 				}),
 				core.Bundle,
+
 				forwarder.Bundle,
 				fx.Provide(defaultforwarder.NewParamsWithResolvers),
+
+				// workloadmeta setup
+				collectors.GetCatalog(),
+				workloadmeta.Module,
+				fx.Provide(func(config config.Component) workloadmeta.Params {
+
+					catalog := workloadmeta.NodeAgent
+
+					if config.GetBool("security_agent.remote_workloadmeta") {
+						catalog = workloadmeta.Remote
+					}
+
+					return workloadmeta.Params{AgentType: catalog}
+				}),
+				fx.Supply(context.Background()),
 			)
 		},
 	}
@@ -89,11 +106,14 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 	return []*cobra.Command{startCmd}
 }
 
-func start(log log.Component, config config.Component, sysprobeconfig sysprobeconfig.Component, telemetry telemetry.Component, forwarder defaultforwarder.Component, params *cliParams) error {
+func start(log log.Component, config config.Component, sysprobeconfig sysprobeconfig.Component, telemetry telemetry.Component,
+	wmeta workloadmeta.Component, forwarder defaultforwarder.Component, params *cliParams) error {
+
+	// Main context passed to components
 	ctx, cancel := context.WithCancel(context.Background())
 	defer StopAgent(cancel, log)
 
-	err := RunAgent(ctx, log, config, sysprobeconfig, telemetry, forwarder, params.pidfilePath)
+	err := RunAgent(ctx, log, config, sysprobeconfig, telemetry, wmeta, forwarder, params.pidfilePath)
 	if errors.Is(err, errAllComponentsDisabled) || errors.Is(err, errNoAPIKeyConfigured) {
 		return nil
 	}
@@ -236,18 +256,6 @@ func RunAgent(ctx context.Context, log log.Component, config config.Component, s
 	if err != nil {
 		return log.Criticalf("Error creating statsd Client: %s", err)
 	}
-
-	// TODO(components): This all will happen in the component instantiation
-	//                   code.
-	//
-	// workloadmetaCollectors := workloadmeta.NodeAgentCatalog
-	// if config.GetBool("security_agent.remote_workloadmeta") {
-	// 	workloadmetaCollectors = workloadmeta.RemoteCatalog
-	// }
-
-	// // Start workloadmeta store
-	// store := workloadmeta.CreateGlobalStore(workloadmetaCollectors)
-	// store.Start(ctx)
 
 	// Initialize the remote tagger
 	if config.GetBool("security_agent.remote_tagger") {
