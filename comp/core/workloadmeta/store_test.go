@@ -6,6 +6,7 @@
 package workloadmeta
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -31,6 +32,7 @@ func TestHandleEvents(t *testing.T) {
 	deps := fxutil.Test[dependencies](t, fx.Options(
 		log.MockModule,
 		config.MockModule,
+		fx.Supply(context.Background()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)
@@ -579,6 +581,7 @@ func TestSubscribe(t *testing.T) {
 			deps := fxutil.Test[dependencies](t, fx.Options(
 				log.MockModule,
 				config.MockModule,
+				fx.Supply(context.Background()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -657,6 +660,7 @@ func TestGetProcess(t *testing.T) {
 	deps := fxutil.Test[dependencies](t, fx.Options(
 		log.MockModule,
 		config.MockModule,
+		fx.Supply(context.Background()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)
@@ -735,6 +739,7 @@ func TestListContainers(t *testing.T) {
 			deps := fxutil.Test[dependencies](t, fx.Options(
 				log.MockModule,
 				config.MockModule,
+				fx.Supply(context.Background()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -772,6 +777,7 @@ func TestListContainersWithFilter(t *testing.T) {
 	deps := fxutil.Test[dependencies](t, fx.Options(
 		log.MockModule,
 		config.MockModule,
+		fx.Supply(context.Background()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)
@@ -830,6 +836,7 @@ func TestListProcesses(t *testing.T) {
 			deps := fxutil.Test[dependencies](t, fx.Options(
 				log.MockModule,
 				config.MockModule,
+				fx.Supply(context.Background()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -867,6 +874,7 @@ func TestListProcessesWithFilter(t *testing.T) {
 	deps := fxutil.Test[dependencies](t, fx.Options(
 		log.MockModule,
 		config.MockModule,
+		fx.Supply(context.Background()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)
@@ -927,6 +935,7 @@ func TestListImages(t *testing.T) {
 			deps := fxutil.Test[dependencies](t, fx.Options(
 				log.MockModule,
 				config.MockModule,
+				fx.Supply(context.Background()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -978,6 +987,7 @@ func TestGetImage(t *testing.T) {
 			deps := fxutil.Test[dependencies](t, fx.Options(
 				log.MockModule,
 				config.MockModule,
+				fx.Supply(context.Background()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -1072,6 +1082,7 @@ func TestResetProcesses(t *testing.T) {
 			deps := fxutil.Test[dependencies](t, fx.Options(
 				log.MockModule,
 				config.MockModule,
+				fx.Supply(context.Background()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -1269,6 +1280,7 @@ func TestReset(t *testing.T) {
 			deps := fxutil.Test[dependencies](t, fx.Options(
 				log.MockModule,
 				config.MockModule,
+				fx.Supply(context.Background()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -1315,6 +1327,7 @@ func TestNoDataRace(t *testing.T) {
 	deps := fxutil.Test[dependencies](t, fx.Options(
 		log.MockModule,
 		config.MockModule,
+		fx.Supply(context.Background()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)

@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/DataDog/datadog-agent/comp/workloadmeta/telemetry"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/errors"
 	"github.com/DataDog/datadog-agent/pkg/status/health"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -50,7 +50,7 @@ func (w *workloadmeta) Start(ctx context.Context) {
 			case <-ctx.Done():
 				err := health.Deregister()
 				if err != nil {
-					log.Warnf("error de-registering health check: %s", err)
+					w.log.Warnf("error de-registering health check: %s", err)
 				}
 
 				return
@@ -78,12 +78,12 @@ func (w *workloadmeta) Start(ctx context.Context) {
 
 				err := health.Deregister()
 				if err != nil {
-					log.Warnf("error de-registering health check: %s", err)
+					w.log.Warnf("error de-registering health check: %s", err)
 				}
 
 				w.unsubscribeAll()
 
-				log.Infof("stopped workloadmeta store")
+				w.log.Infof("stopped workloadmeta store")
 
 				return
 			}
@@ -92,11 +92,11 @@ func (w *workloadmeta) Start(ctx context.Context) {
 
 	go func() {
 		if err := w.startCandidatesWithRetry(ctx); err != nil {
-			log.Errorf("error starting collectors: %s", err)
+			w.log.Errorf("error starting collectors: %s", err)
 		}
 	}()
 
-	log.Info("workloadmeta store initialized successfully")
+	w.log.Info("workloadmeta store initialized successfully")
 }
 
 // Subscribe returns a channel where workload metadata events will be streamed
@@ -432,14 +432,6 @@ func (w *workloadmeta) Reset(newEntities []Entity, source Source) {
 	w.Notify(events)
 }
 
-// Set allows setting an entity in the workloadmeta store
-// This is a NOP in the real implementation
-func (w *workloadmeta) Set(entity Entity) {}
-
-// Unset removes an entity from the workloadmeta store
-// This is a NOP in the real implementation
-func (w *workloadmeta) Unset(entity Entity) {}
-
 func (w *workloadmeta) startCandidatesWithRetry(ctx context.Context) error {
 	expBackoff := backoff.NewExponentialBackOff()
 	expBackoff.InitialInterval = retryCollectorInitialInterval
@@ -449,7 +441,7 @@ func (w *workloadmeta) startCandidatesWithRetry(ctx context.Context) error {
 	return backoff.Retry(func() error {
 		select {
 		case <-ctx.Done():
-			return &backoff.PermanentError{Err: fmt.Errorf("stopped before all collectors were able to start")}
+			return &backoff.PermanentError{Err: fmt.Errorf("stopped before all collectors were able to start: %v", w.candidates)}
 		default:
 		}
 
@@ -471,16 +463,16 @@ func (w *workloadmeta) startCandidates(ctx context.Context) bool {
 		// Leave candidates that returned a retriable error to be
 		// re-started in the next tick
 		if err != nil && retry.IsErrWillRetry(err) {
-			log.Debugf("workloadmeta collector %q could not start, but will retry. error: %s", id, err)
+			w.log.Debugf("workloadmeta collector %q could not start, but will retry. error: %s", id, err)
 			continue
 		}
 
 		// Store successfully started collectors for future reference
 		if err == nil {
-			log.Infof("workloadmeta collector %q started successfully", id)
+			w.log.Infof("workloadmeta collector %q started successfully", id)
 			w.collectors[id] = c
 		} else {
-			log.Infof("workloadmeta collector %q could not start. error: %s", id, err)
+			w.log.Infof("workloadmeta collector %q could not start. error: %s", id, err)
 		}
 
 		// Remove non-retriable and successfully started collectors
@@ -503,9 +495,9 @@ func (w *workloadmeta) pull(ctx context.Context) {
 		if alreadyRunning {
 			timeRunning := time.Since(ongoingPullStartTime)
 			if timeRunning > maxCollectorPullTime {
-				log.Errorf("collector %q has been running for too long (%d seconds)", id, timeRunning/time.Second)
+				w.log.Errorf("collector %q has been running for too long (%d seconds)", id, timeRunning/time.Second)
 			} else {
-				log.Debugf("collector %q is still running. Will not pull again for now", id)
+				w.log.Debugf("collector %q is still running. Will not pull again for now", id)
 			}
 			w.ongoingPullsMut.Unlock()
 			continue
@@ -522,7 +514,7 @@ func (w *workloadmeta) pull(ctx context.Context) {
 
 			err := c.Pull(pullCtx)
 			if err != nil {
-				log.Warnf("error pulling from collector %q: %s", id, err.Error())
+				w.log.Warnf("error pulling from collector %q: %s", id, err.Error())
 				telemetry.PullErrors.Inc(id)
 			}
 
@@ -609,7 +601,7 @@ func (w *workloadmeta) handleEvents(evs []CollectorEvent) {
 				delete(entitiesOfKind, entityID.ID)
 			}
 		default:
-			log.Errorf("cannot handle event of type %d. event dump: %+v", ev.Type, ev)
+			w.log.Errorf("cannot handle event of type %d. event dump: %+v", ev.Type, ev)
 		}
 
 		for _, sub := range w.subscribers {
@@ -639,7 +631,7 @@ func (w *workloadmeta) handleEvents(evs []CollectorEvent) {
 				entity = entity.DeepCopy()
 				err := entity.Merge(ev.Entity)
 				if err != nil {
-					log.Errorf("cannot merge %+v into %+v: %s", entity, ev.Entity, err)
+					w.log.Errorf("cannot merge %+v into %+v: %s", entity, ev.Entity, err)
 					continue
 				}
 
