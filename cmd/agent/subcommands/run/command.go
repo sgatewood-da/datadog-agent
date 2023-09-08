@@ -39,6 +39,8 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/core/sysprobeconfig"
 	"github.com/DataDog/datadog-agent/comp/core/telemetry"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors"
 	"github.com/DataDog/datadog-agent/comp/dogstatsd"
 	"github.com/DataDog/datadog-agent/comp/dogstatsd/replay"
 	dogstatsdServer "github.com/DataDog/datadog-agent/comp/dogstatsd/server"
@@ -53,7 +55,6 @@ import (
 	"github.com/DataDog/datadog-agent/comp/otelcol"
 	otelcollector "github.com/DataDog/datadog-agent/comp/otelcol/collector"
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcclient"
-	"github.com/DataDog/datadog-agent/comp/workloadmeta"
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
 	"github.com/DataDog/datadog-agent/pkg/api/healthprobe"
 	"github.com/DataDog/datadog-agent/pkg/autodiscovery/providers"
@@ -332,6 +333,22 @@ func getSharedFxOption() fx.Option {
 			params.Options.EnabledFeatures = pkgforwarder.SetFeature(params.Options.EnabledFeatures, pkgforwarder.CoreFeatures)
 			return params
 		}),
+
+		// workloadmeta setup
+		collectors.GetCatalog(),
+		fx.Provide(func(config config.Component) workloadmeta.Params {
+			var catalog workloadmeta.AgentType
+			if flavor.GetFlavor() == flavor.ClusterAgent {
+				catalog = workloadmeta.ClusterAgent
+			} else {
+				catalog = workloadmeta.NodeAgent
+			}
+
+			return workloadmeta.Params{AgentType: catalog}
+		}),
+		fx.Supply(context.Background()),
+		workloadmeta.Module,
+
 		dogstatsd.Bundle,
 		otelcol.Bundle,
 		rcclient.Module,
@@ -368,7 +385,7 @@ func getSharedFxOption() fx.Option {
 			demux = aggregator.InitAndStartAgentDemultiplexer(log, sharedForwarder, opts, hostnameDetected)
 			return demux, nil
 		}),
-		// injecting the shared Serializer to FX until we migrate it to a prpoper component. This allows other
+		// injecting the shared Serializer to FX until we migrate it to a proper component. This allows other
 		// already migrated components to request it.
 		fx.Provide(func(demux *aggregator.AgentDemultiplexer) serializer.MetricSerializer {
 			return demux.Serializer()
@@ -540,7 +557,7 @@ func startAgent(
 	}
 
 	// start the cmd HTTP server
-	if err = api.StartServer(configService, flare, server, capture, serverDebug, logsAgent, aggregator.GetSenderManager()); err != nil {
+	if err = api.StartServer(configService, flare, server, capture, serverDebug, wmeta, logsAgent, aggregator.GetSenderManager()); err != nil {
 		return log.Errorf("Error while starting api server, exiting: %v", err)
 	}
 
