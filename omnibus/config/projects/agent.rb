@@ -170,7 +170,7 @@ package :zip do
     if ENV['SIGN_WINDOWS_DD_WCS']
       dd_wcssign true
     end
-  
+
   end
 end
 
@@ -392,7 +392,7 @@ if windows?
   FORBIDDEN_SYMBOLS = [
     "github.com/golang/glog"
   ]
-  
+
   raise_if_forbidden_symbol_found = Proc.new { |symbols|
     FORBIDDEN_SYMBOLS.each do |fs|
       count = symbols.scan(fs).count()
