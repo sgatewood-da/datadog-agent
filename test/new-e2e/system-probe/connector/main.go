@@ -162,6 +162,9 @@ func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricP
 	if failType != "" {
 		tags = append(tags, fmt.Sprintf("error:%s", failType))
 	}
+	if cinfo.connectorHost {
+		tags = append(tags, fmt.Sprintf("host:%s", cinfo.connectorHost))
+	}
 	return datadogV2.MetricPayload{
 		Series: []datadogV2.MetricSeries{
 			{
@@ -171,12 +174,6 @@ func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricP
 					{
 						Timestamp: datadog.PtrInt64(time.Now().Unix()),
 						Value:     datadog.PtrFloat64(1),
-					},
-				},
-				Resources: []datadogV2.MetricResource{
-					{
-						Name: datadog.PtrString(cinfo.connectorHost),
-						Type: datadog.PtrString("host"),
 					},
 				},
 				Tags: tags,
