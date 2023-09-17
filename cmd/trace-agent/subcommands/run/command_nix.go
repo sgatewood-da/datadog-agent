@@ -36,6 +36,7 @@ func runTraceAgent(cliParams *RunParams, defaultConfPath string) error {
 	return runFx(ctx, cliParams, defaultConfPath)
 }
 
+// Run runs the agent and sets up the signal handlers
 func Run(cs *contextSupplier, cliParams *RunParams, config config.Component, wmeta workloadmeta.Component) error {
 	ctx, cancelFunc := context.WithCancel(cs.ctx)
 

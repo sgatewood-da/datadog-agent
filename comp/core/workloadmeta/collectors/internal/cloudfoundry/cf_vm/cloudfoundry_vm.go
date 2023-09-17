@@ -3,7 +3,12 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
+// Package cf_vm provides a workloadmeta collector for CloudForundry VM
+//
+//revive:disable:var-naming underscores not permitted rename package
 package cf_vm
+
+//revive:enable:var-naming
 
 import (
 	"context"
@@ -37,6 +42,7 @@ type collector struct {
 	dcaEnabled bool
 }
 
+// NewCollector instantiates a CollectorProvider which can provide a CF container collector
 func NewCollector() (workloadmeta.CollectorProvider, error) {
 	return workloadmeta.CollectorProvider{
 		Collector: &collector{
@@ -47,6 +53,7 @@ func NewCollector() (workloadmeta.CollectorProvider, error) {
 	}, nil
 }
 
+// GetFxOptions returns the FX framework options for the collector
 func GetFxOptions() fx.Option {
 	return fx.Provide(NewCollector)
 }
@@ -212,4 +219,8 @@ func (c *collector) getDCAClient() clusteragent.DCAClientInterface {
 
 func (c *collector) GetID() string {
 	return c.id
+}
+
+func (c *collector) GetTargetCatalog() workloadmeta.AgentType {
+	return c.catalog
 }

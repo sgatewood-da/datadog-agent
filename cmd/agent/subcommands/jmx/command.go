@@ -27,6 +27,7 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors"
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
 	"github.com/DataDog/datadog-agent/pkg/autodiscovery/integration"
 	"github.com/DataDog/datadog-agent/pkg/cli/standalone"
@@ -101,7 +102,9 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 
 			// workloadmeta setup
 			collectors.GetCatalog(),
-			fx.Supply(workloadmeta.NewParams()),
+			fx.Supply(workloadmeta.Params{
+				InitHelper: common.GetWorkloadmetaInit(),
+			}),
 			workloadmeta.Module,
 		)
 	}
@@ -242,7 +245,10 @@ func runJmxCommandConsole(log log.Component, config config.Component, wmeta work
 		return fmt.Errorf("Unable to set up JMX logger: %v", err)
 	}
 
-	common.LoadComponents(context.Background(), aggregator.GetSenderManager(), wmeta, config.GetString("confd_path"))
+	// The Autoconfig instance setup happens in the workloadmeta start hook
+	// create and setup the Collector and others.
+	common.LoadComponents(context.Background(), aggregator.GetSenderManager(), pkgconfig.Datadog.GetString("confd_path"))
+
 	common.AC.LoadAndRun(context.Background())
 
 	// Create the CheckScheduler, but do not attach it to

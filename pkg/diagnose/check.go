@@ -11,7 +11,6 @@ import (
 
 	"github.com/DataDog/datadog-agent/cmd/agent/common"
 	"github.com/DataDog/datadog-agent/comp/core/log"
-	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
 	forwarder "github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder"
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/sender"
@@ -113,9 +112,7 @@ func diagnoseChecksInCLIProcess(diagCfg diagnosis.Config, senderManager sender.S
 	forwarder := forwarder.NewDefaultForwarder(config.Datadog, log, forwarder.NewOptions(config.Datadog, log, nil))
 	aggregator.InitAndStartAgentDemultiplexer(log, forwarder, opts, hostnameDetected)
 
-	// TODO(components): this should rely on workloadmeta component and not global state
-	wmeta := workloadmeta.GetGlobalStore()
-	common.LoadComponents(context.Background(), senderManager, wmeta, pkgconfig.Datadog.GetString("confd_path"))
+	common.LoadComponents(context.Background(), senderManager, pkgconfig.Datadog.GetString("confd_path"))
 	common.AC.LoadAndRun(context.Background())
 
 	// Create the CheckScheduler, but do not attach it to

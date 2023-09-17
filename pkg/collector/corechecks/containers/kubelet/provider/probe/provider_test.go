@@ -8,6 +8,7 @@
 package probe
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,8 +18,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/fx"
 
+	"github.com/DataDog/datadog-agent/comp/core"
 	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta/collectors"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/mocksender"
 	"github.com/DataDog/datadog-agent/pkg/autodiscovery/common/types"
 	checkid "github.com/DataDog/datadog-agent/pkg/collector/check/id"
@@ -26,6 +30,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/tagger"
 	"github.com/DataDog/datadog-agent/pkg/tagger/local"
 	"github.com/DataDog/datadog-agent/pkg/util/containers"
+	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet/mock"
@@ -262,9 +267,9 @@ func TestProvider_Provide(t *testing.T) {
 			//                    component.
 			store := fxutil.Test[workloadmeta.Mock](t, fx.Options(
 				core.MockBundle,
-				fx.Replace(corecomp.MockParams{Overrides: overrides}),
 				fx.Supply(context.Background()),
 				collectors.GetCatalog(),
+				fx.Supply(workloadmeta.NewParams()),
 				workloadmeta.MockModuleV2,
 			))
 
@@ -277,7 +282,7 @@ func TestProvider_Provide(t *testing.T) {
 			}
 			tagger.SetDefaultTagger(fakeTagger)
 
-			err := storePopulatedFromFile(store, tt.podsFile)
+			err = storePopulatedFromFile(store, tt.podsFile)
 			if err != nil {
 				t.Errorf("unable to populate store from file at: %s, err: %v", tt.podsFile, err)
 			}
@@ -326,19 +331,19 @@ func TestProvider_Provide(t *testing.T) {
 	}
 }
 
-func storePopulatedFromFile(store *workloadmeta.Mock, filename string) error {
+func storePopulatedFromFile(store workloadmeta.Mock, filename string) error {
 	if filename == "" {
-		return store, nil
+		return nil
 	}
 
 	podList, err := os.ReadFile(filename)
 	if err != nil {
-		return store, fmt.Errorf("unable to load pod list, err: %w", err)
+		return fmt.Errorf("unable to load pod list, err: %w", err)
 	}
 	var pods *kubelet.PodList
 	err = json.Unmarshal(podList, &pods)
 	if err != nil {
-		return store, fmt.Errorf("unable to load pod list, err: %w", err)
+		return fmt.Errorf("unable to load pod list, err: %w", err)
 	}
 
 	for _, pod := range pods.Items {
@@ -401,5 +406,5 @@ func storePopulatedFromFile(store *workloadmeta.Mock, filename string) error {
 			Containers: podContainers,
 		})
 	}
-	return store, err
+	return err
 }

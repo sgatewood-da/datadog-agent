@@ -33,6 +33,7 @@ func TestHandleEvents(t *testing.T) {
 		log.MockModule,
 		config.MockModule,
 		fx.Supply(context.Background()),
+		fx.Supply(NewParams()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)
@@ -582,6 +583,7 @@ func TestSubscribe(t *testing.T) {
 				log.MockModule,
 				config.MockModule,
 				fx.Supply(context.Background()),
+				fx.Supply(NewParams()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -661,6 +663,7 @@ func TestGetProcess(t *testing.T) {
 		log.MockModule,
 		config.MockModule,
 		fx.Supply(context.Background()),
+		fx.Supply(NewParams()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)
@@ -740,6 +743,7 @@ func TestListContainers(t *testing.T) {
 				log.MockModule,
 				config.MockModule,
 				fx.Supply(context.Background()),
+				fx.Supply(NewParams()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -778,6 +782,7 @@ func TestListContainersWithFilter(t *testing.T) {
 		log.MockModule,
 		config.MockModule,
 		fx.Supply(context.Background()),
+		fx.Supply(NewParams()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)
@@ -837,6 +842,7 @@ func TestListProcesses(t *testing.T) {
 				log.MockModule,
 				config.MockModule,
 				fx.Supply(context.Background()),
+				fx.Supply(NewParams()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -875,6 +881,7 @@ func TestListProcessesWithFilter(t *testing.T) {
 		log.MockModule,
 		config.MockModule,
 		fx.Supply(context.Background()),
+		fx.Supply(NewParams()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)
@@ -936,6 +943,7 @@ func TestListImages(t *testing.T) {
 				log.MockModule,
 				config.MockModule,
 				fx.Supply(context.Background()),
+				fx.Supply(NewParams()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -987,6 +995,7 @@ func TestGetImage(t *testing.T) {
 			deps := fxutil.Test[dependencies](t, fx.Options(
 				log.MockModule,
 				config.MockModule,
+				fx.Supply(NewParams()),
 				fx.Supply(context.Background()),
 			))
 
@@ -1083,6 +1092,7 @@ func TestResetProcesses(t *testing.T) {
 				log.MockModule,
 				config.MockModule,
 				fx.Supply(context.Background()),
+				fx.Supply(NewParams()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -1281,6 +1291,7 @@ func TestReset(t *testing.T) {
 				log.MockModule,
 				config.MockModule,
 				fx.Supply(context.Background()),
+				fx.Supply(NewParams()),
 			))
 
 			s := newWorkloadMeta(deps).(*workloadmeta)
@@ -1328,6 +1339,7 @@ func TestNoDataRace(t *testing.T) {
 		log.MockModule,
 		config.MockModule,
 		fx.Supply(context.Background()),
+		fx.Supply(NewParams()),
 	))
 
 	s := newWorkloadMeta(deps).(*workloadmeta)

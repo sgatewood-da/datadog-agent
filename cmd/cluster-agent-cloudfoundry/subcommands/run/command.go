@@ -66,7 +66,10 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 
 				// setup workloadmeta
 				collectors.GetCatalog(),
-				fx.Supply(workloadmeta.NewParams()), // TODO(components): check what this must be for cluster-agent-cloudfoundry
+				fx.Supply(workloadmeta.Params{
+					InitHelper: common.GetWorkloadmetaInit(),
+				}), // TODO(components): check what this must be for cluster-agent-cloudfoundry
+
 				fx.Supply(context.Background()),
 				workloadmeta.Module,
 			)
@@ -124,8 +127,9 @@ func run(log log.Component, config config.Component, wmeta workloadmeta.Componen
 		return err
 	}
 
-	// create and setup the Autoconfig instance
-	common.LoadComponents(mainCtx, aggregator.GetSenderManager(), wmeta, pkgconfig.Datadog.GetString("confd_path"))
+	// The Autoconfig instance setup happens in the workloadmeta start hook
+	// create and setup the Collector and others.
+	common.LoadComponents(mainCtx, aggregator.GetSenderManager(), pkgconfig.Datadog.GetString("confd_path"))
 
 	// Set up check collector
 	common.AC.AddScheduler("check", collector.InitCheckScheduler(common.Coll, aggregator.GetSenderManager()), true)
