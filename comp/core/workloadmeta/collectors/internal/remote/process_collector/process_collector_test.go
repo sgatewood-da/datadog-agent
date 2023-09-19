@@ -92,7 +92,7 @@ func TestCollection(t *testing.T) {
 						{
 							Pid:          123,
 							Nspid:        345,
-							ContainerId:  "cid",
+							ContainerID:  "cid",
 							Language:     &pbgo.Language{Name: string(languagemodels.Java)},
 							CreationTime: creationTime,
 						},
@@ -122,7 +122,7 @@ func TestCollection(t *testing.T) {
 						{
 							Pid:          123,
 							Nspid:        345,
-							ContainerId:  "cid",
+							ContainerID:  "cid",
 							Language:     &pbgo.Language{Name: string(languagemodels.Java)},
 							CreationTime: creationTime,
 						},
@@ -134,7 +134,7 @@ func TestCollection(t *testing.T) {
 						{
 							Pid:          345,
 							Nspid:        567,
-							ContainerId:  "cid",
+							ContainerID:  "cid",
 							Language:     &pbgo.Language{Name: string(languagemodels.Java)},
 							CreationTime: creationTime,
 						},
@@ -174,7 +174,7 @@ func TestCollection(t *testing.T) {
 						{
 							Pid:          123,
 							Nspid:        345,
-							ContainerId:  "cid",
+							ContainerID:  "cid",
 							Language:     &pbgo.Language{Name: string(languagemodels.Java)},
 							CreationTime: creationTime,
 						},
@@ -216,7 +216,7 @@ func TestCollection(t *testing.T) {
 						{
 							Pid:          345,
 							Nspid:        678,
-							ContainerId:  "cid",
+							ContainerID:  "cid",
 							Language:     &pbgo.Language{Name: string(languagemodels.Java)},
 							CreationTime: creationTime,
 						},
