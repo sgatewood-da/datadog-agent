@@ -8,6 +8,7 @@
 package sbom
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -411,7 +412,7 @@ func TestProcessEvents(t *testing.T) {
 			var SBOMsSent = atomic.NewInt32(0)
 
 			// FIXME(components): use actual workloadmeta mock component here instead.
-			workloadmetaStore := fxutil.Test[workloadmeta.Component](t, fx.Options(
+			workloadmetaStore := fxutil.Test[workloadmeta.Mock](t, fx.Options(
 				log.MockModule,
 				configcomp.MockModule,
 				fx.Supply(context.Background()),
