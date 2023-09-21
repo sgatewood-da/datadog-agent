@@ -97,7 +97,11 @@ func (c *Collector) run(ctx context.Context, store workloadmeta.Component, conta
 // In the future, we should use it to poll for processes that have been collected and store them in workload-meta.
 
 func (c *Collector) handleContainerEvent(evt workloadmeta.EventBundle) {
-	defer close(evt.Ch)
+	defer func() {
+		if evt.Ch != nil {
+			close(evt.Ch)
+		}
+	}()
 
 	for _, evt := range evt.Events {
 		ent := evt.Entity.(*workloadmeta.Container)

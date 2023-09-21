@@ -235,7 +235,7 @@ func disableCmdPort() {
 // runJmxCommandConsole sets up the common utils necessary for JMX, and executes the command
 // with the Console reporter
 func runJmxCommandConsole(log log.Component, config config.Component, wmeta workloadmeta.Component, cliParams *cliParams) error {
-	// This prevents log-spam from "pkg/workloadmeta/collectors/internal/remote/process_collector/process_collector.go"
+	// This prevents log-spam from "comp/core/workloadmeta/collectors/internal/remote/process_collector/process_collector.go"
 	// It appears that this collector creates some contention in AD.
 	// Disabling it is both more efficient and gets rid of this log spam
 	pkgconfig.Datadog.Set("language_detection.enabled", "false")

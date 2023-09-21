@@ -12,8 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
+	"github.com/DataDog/datadog-agent/comp/core"
+	"github.com/DataDog/datadog-agent/comp/core/config"
+	"github.com/DataDog/datadog-agent/comp/core/workloadmeta"
+	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
+
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/fx"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -23,11 +28,26 @@ func testCollectEvent(t *testing.T, createResource func(*fake.Clientset) error, 
 	// Create a fake client to mock API calls.
 	client := fake.NewSimpleClientset()
 
-	// Use the fake client in kubeapiserver context.
-	wlm := workloadmeta.NewMockStore()
+	overrides := map[string]interface{}{
+		"cluster_agent.collect_kubernetes_tags": true,
+		"language_detection.enabled":            true,
+	}
+
+	wlm := fxutil.Test[workloadmeta.Mock](t, fx.Options(
+		core.MockBundle,
+		fx.Replace(config.MockParams{Overrides: overrides}),
+		fx.Supply(context.Background()),
+		fx.Supply(workloadmeta.NewParams()),
+		// GetFxOptions(),
+		workloadmeta.MockModuleV2,
+	))
+	wlm.Start(context.Background())
+
 	store, _ := newStore(context.TODO(), wlm, client)
 	stopStore := make(chan struct{})
 	go store.Run(stopStore)
+	time.Sleep(5 * time.Second)
+
 	time.Sleep(5 * time.Second)
 
 	ch := wlm.Subscribe(dummySubscriber, workloadmeta.NormalPriority, nil)
@@ -41,7 +61,10 @@ func testCollectEvent(t *testing.T, createResource func(*fake.Clientset) error, 
 
 	// Retrieving the resource in an event bundle
 	bundle := <-ch
-	close(bundle.Ch)
+	if bundle.Ch != nil {
+		close(bundle.Ch)
+	}
+
 	// nil the bundle's Ch so we can
 	// deep-equal just the events later
 	bundle.Ch = nil
