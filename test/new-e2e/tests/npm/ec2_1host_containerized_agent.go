@@ -6,7 +6,6 @@
 package npm
 
 import (
-	"errors"
 	"math"
 	"os"
 	"testing"
@@ -18,7 +17,7 @@ import (
 	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/utils/e2e"
 	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/utils/e2e/params"
 	"github.com/DataDog/test-infra-definitions/components/datadog/agentparams"
-	"github.com/cenkalti/backoff/v4"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,7 +44,7 @@ func TestEC2VMSuite(t *testing.T) {
 	// Source of our kitchen CI images test/kitchen/platforms.json
 	// Other VM image can be used, our kitchen CI images test/kitchen/platforms.json
 	// ec2params.WithImageName("ami-a4dc46db", os.AMD64Arch, ec2os.AmazonLinuxOS) // ubuntu-16-04-4.4
-	e2e.Run(t, s, e2e.FakeIntakeStackDef(nil, agentparams.WithSystemProbeConfig(NPMsystemProbeConfig)), e2eParams...)
+	e2e.Run(t, s, e2e.FakeIntakeStackDef(e2e.WithAgentParams(agentparams.WithSystemProbeConfig(NPMsystemProbeConfig))), e2eParams...)
 }
 
 // TestFakeIntakeNPM Validate the agent can communicate with the (fake) backend and send connections every 30 seconds
@@ -61,40 +60,38 @@ func (v *ec2VMContainerizedAgentSuite) TestFakeIntakeNPM() {
 
 	targetHostnameNetID := ""
 	// looking for 1 host to send CollectorConnections payload to the fakeintake
-	err := backoff.Retry(func() error {
+	v.EventuallyWithT(func(c *assert.CollectT) {
 		// generate a connection
 		v.Env().VM.Execute("curl http://www.datadoghq.com")
 
 		hostnameNetID, err := v.Env().Fakeintake.GetConnectionsNames()
-		if err != nil {
-			return err
-		}
-		if len(hostnameNetID) == 0 {
-			return errors.New("no connections yet")
+		assert.NoError(c, err, "GetConnectionsNames() errors")
+		if !assert.NotZero(c, len(hostnameNetID), "no connections yet") {
+			return
 		}
 		targetHostnameNetID = hostnameNetID[0]
 
 		t.Logf("hostname+networkID %v seen connections", hostnameNetID)
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 60))
-	require.NoError(t, err)
+	}, 60*time.Second, time.Second, "no connections received")
 
 	// looking for 3 payloads and check if the last 2 have a span of 30s +/- 500ms
-	err = backoff.Retry(func() error {
+	v.EventuallyWithT(func(c *assert.CollectT) {
 		cnx, err := v.Env().Fakeintake.GetConnections()
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
-		payloadsTimestamp := cnx.GetCollectedTimeByName(targetHostnameNetID)
-		if len(payloadsTimestamp) < 3 {
-			return errors.New("not enough payloads")
+		if !assert.Greater(c, len(cnx.GetPayloadsByName(targetHostnameNetID)), 2, "not enough payloads") {
+			return
 		}
-
-		dt := float64(payloadsTimestamp[2].Sub(payloadsTimestamp[1])) / float64(time.Second)
+		var payloadsTimestamps []time.Time
+		for _, cc := range cnx.GetPayloadsByName(targetHostnameNetID) {
+			payloadsTimestamps = append(payloadsTimestamps, cc.GetCollectedTime())
+		}
+		dt := payloadsTimestamps[2].Sub(payloadsTimestamps[1]).Seconds()
 		t.Logf("hostname+networkID %v diff time %f seconds", targetHostnameNetID, dt)
-		require.LessOrEqual(t, math.Abs(dt-30), 0.5, "delta between collection is higher that 500ms")
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 90))
-	require.NoError(t, err)
+
+		// we want the test fail now, not retrying on the next payloads
+		require.Greater(t, 0.5, math.Abs(dt-30), "delta between collection is higher that 500ms")
+	}, 90*time.Second, time.Second, "not enough connections received")
 }
 
 // TestFakeIntakeNPM_TCP_UDP_DNS validate we received tcp, udp, and DNS connections
@@ -102,13 +99,18 @@ func (v *ec2VMContainerizedAgentSuite) TestFakeIntakeNPM() {
 func (v *ec2VMContainerizedAgentSuite) TestFakeIntakeNPM_TCP_UDP_DNS() {
 	t := v.T()
 
-	err := backoff.Retry(func() error {
+	// default is to reset the current state of the fakeintake aggregators
+	if !v.DevMode {
+		v.Env().Fakeintake.FlushServerAndResetAggregators()
+	}
+
+	v.EventuallyWithT(func(c *assert.CollectT) {
 		// generate connections
 		v.Env().VM.Execute("curl http://www.datadoghq.com")
 		v.Env().VM.Execute("dig @8.8.8.8 www.google.ch")
 
 		cnx, err := v.Env().Fakeintake.GetConnections()
-		require.NoError(t, err)
+		require.NoError(c, err)
 
 		var currentHostname string
 		var currentConnection *agentmodel.Connection
@@ -124,11 +126,10 @@ func (v *ec2VMContainerizedAgentSuite) TestFakeIntakeNPM_TCP_UDP_DNS() {
 			currentConnection = c
 			if len(c.DnsStatsByDomainOffsetByQueryType) > 0 {
 				foundDNS = true
-				printDNS(t, c, cc, hostname)
 			}
 		})
-		if !foundDNS {
-			return errors.New("DNS not found")
+		if !assert.True(c, foundDNS, "DNS not found") {
+			return
 		}
 
 		type countCnx struct {
@@ -156,6 +157,8 @@ func (v *ec2VMContainerizedAgentSuite) TestFakeIntakeNPM_TCP_UDP_DNS() {
 				count.UDP++
 			}
 			validateConnection(t, c, cc, hostname)
+
+			validateDNS(t, c, cc, hostname)
 		})
 
 		totalConnections := countCnx{}
@@ -166,7 +169,5 @@ func (v *ec2VMContainerizedAgentSuite) TestFakeIntakeNPM_TCP_UDP_DNS() {
 			totalConnections.UDP += count.UDP
 		}
 		t.Logf("sum connections %d tcp %d udp %d", totalConnections.hit, totalConnections.TCP, totalConnections.UDP)
-		return nil
-	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 60))
-	require.NoError(t, err)
+	}, 60*time.Second, time.Second)
 }
