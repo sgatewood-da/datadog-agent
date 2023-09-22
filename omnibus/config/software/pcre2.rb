@@ -33,6 +33,8 @@ build do
   configure_command = [
     "./configure",
     "--prefix=#{install_dir}/embedded",
+    "--disable-static",
+    "--enable-shared",
   ]
 
   command configure_command.join(" "), env: env
