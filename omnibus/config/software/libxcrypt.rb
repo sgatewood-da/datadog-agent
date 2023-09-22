@@ -36,6 +36,8 @@ build do
     # needs to be removed.
     command ["./configure",
         "--prefix=#{install_dir}/embedded",
+        "--disable-static",
+        "--enable-shared",
         "--disable-obsolete-api"].join(" "), env: env
     command "make -j #{workers}", env: env
     command "make -j #{workers} install"
