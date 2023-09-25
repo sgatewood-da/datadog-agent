@@ -250,6 +250,9 @@ type Config struct {
 	// EnableHTTPStatsByStatusCode specifies if the HTTP stats should be aggregated by the actual status code
 	// instead of the status code family.
 	EnableHTTPStatsByStatusCode bool
+
+	// EnableUSMQuantization enables endpoint quantization for USM programs
+	EnableUSMQuantization bool
 }
 
 func join(pieces ...string) string {
@@ -342,6 +345,7 @@ func New() *Config {
 		JavaAgentBlockRegex:         cfg.GetString(join(smjtNS, "block_regex")),
 		EnableGoTLSSupport:          cfg.GetBool(join(smNS, "enable_go_tls_support")),
 		EnableHTTPStatsByStatusCode: cfg.GetBool(join(smNS, "enable_http_stats_by_status_code")),
+		EnableUSMQuantization:       cfg.GetBool(join(smNS, "enable_quantization")),
 	}
 
 	httpRRKey := join(smNS, "http_replace_rules")
