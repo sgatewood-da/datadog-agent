@@ -51,13 +51,12 @@ else
     runtime_script_dependency :pre, "coreutils"
     runtime_script_dependency :pre, "findutils"
     runtime_script_dependency :pre, "grep"
-    if redhat?
-      runtime_script_dependency :pre, "glibc-common"
-      runtime_script_dependency :pre, "shadow-utils"
-    end
     if suse_target?
       runtime_script_dependency :pre, "glibc"
       runtime_script_dependency :pre, "shadow"
+    else
+      runtime_script_dependency :pre, "glibc-common"
+      runtime_script_dependency :pre, "shadow-utils"
     end
   else
     maintainer 'Datadog Packages <package@datadoghq.com>'
