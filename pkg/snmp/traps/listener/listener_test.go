@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2022-present Datadog, Inc.
 
-package traps
+package listener
 
 import (
 	"errors"
@@ -12,6 +12,9 @@ import (
 
 	"github.com/DataDog/datadog-agent/comp/core/log"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/mocksender"
+	"github.com/DataDog/datadog-agent/pkg/snmp/traps/config"
+	"github.com/DataDog/datadog-agent/pkg/snmp/traps/packet"
+	"github.com/DataDog/datadog-agent/pkg/snmp/traps/status"
 	"github.com/DataDog/datadog-agent/pkg/util/fxutil"
 
 	"github.com/gosnmp/gosnmp"
@@ -19,69 +22,66 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var serverPort = getFreePort()
-var initialTrapsPacketsAuthErrors int64
+var serverPort = GetFreePort()
 
 const defaultTimeout = 1 * time.Second
 
-func listenerTestSetup(t *testing.T, config Config) (*mocksender.MockSender, *TrapListener) {
+func listenerTestSetup(t *testing.T, config *config.TrapsConfig) (*mocksender.MockSender, *TrapListener, status.Manager) {
 	logger := fxutil.Test[log.Component](t, log.MockModule)
 	mockSender := mocksender.NewMockSender("snmp-traps-telemetry")
 	mockSender.SetupAcceptAll()
-	packetOutChan := make(PacketsChannel, packetsChanSize)
-
-	trapListener, err := startSNMPTrapListener(config, mockSender, packetOutChan, logger)
+	packetOutChan := make(packet.PacketsChannel, config.GetPacketChannelSize())
+	status := status.NewMock()
+	trapListener, err := NewTrapListener(config, mockSender, packetOutChan, logger, status)
 	require.NoError(t, err)
-
-	// trapsPacketsAuthErrors is global so its value carries over from test to test.  Capture its initial value to determine if it changes during an individual test run.
-	initialTrapsPacketsAuthErrors = trapsPacketsAuthErrors.Value()
-
-	return mockSender, trapListener
+	err = trapListener.Start()
+	require.NoError(t, err)
+	return mockSender, trapListener, status
 }
 
 func TestListenV1GenericTrap(t *testing.T) {
-	config := Config{Port: serverPort, CommunityStrings: []string{"public"}, Namespace: "totoro"}
-	_, trapListener := listenerTestSetup(t, config)
+	config := &config.TrapsConfig{Port: serverPort, CommunityStrings: []string{"public"}, Namespace: "totoro"}
+	_, trapListener, status := listenerTestSetup(t, config)
 	defer trapListener.Stop()
 
 	sendTestV1GenericTrap(t, config, "public")
-	packet, err := receivePacket(t, trapListener, defaultTimeout)
+	packet, err := receivePacket(t, trapListener, defaultTimeout, status)
 	require.NoError(t, err)
 	packet.Content.SnmpTrap.Variables = packet.Content.Variables
 	assert.Equal(t, LinkDownv1GenericTrap, packet.Content.SnmpTrap)
 }
 
 func TestServerV1SpecificTrap(t *testing.T) {
-	config := Config{Port: serverPort, CommunityStrings: []string{"public"}}
-	_, trapListener := listenerTestSetup(t, config)
+	config := &config.TrapsConfig{Port: serverPort, CommunityStrings: []string{"public"}}
+	_, trapListener, status := listenerTestSetup(t, config)
 	defer trapListener.Stop()
 
 	sendTestV1SpecificTrap(t, config, "public")
-	packet, err := receivePacket(t, trapListener, defaultTimeout)
+	packet, err := receivePacket(t, trapListener, defaultTimeout, status)
 	require.NoError(t, err)
 	packet.Content.SnmpTrap.Variables = packet.Content.Variables
 	assert.Equal(t, AlarmActiveStatev1SpecificTrap, packet.Content.SnmpTrap)
 }
 
 func TestServerV2(t *testing.T) {
-	config := Config{Port: serverPort, CommunityStrings: []string{"public"}}
-	_, trapListener := listenerTestSetup(t, config)
+	config := &config.TrapsConfig{Port: serverPort, CommunityStrings: []string{"public"}}
+	_, trapListener, status := listenerTestSetup(t, config)
 	defer trapListener.Stop()
 
 	sendTestV2Trap(t, config, "public")
-	packet, err := receivePacket(t, trapListener, defaultTimeout)
+	packet, err := receivePacket(t, trapListener, defaultTimeout, status)
 	require.NoError(t, err)
 	assertIsValidV2Packet(t, packet, config)
 	assertVariables(t, packet)
 }
 
 func TestServerV2BadCredentials(t *testing.T) {
-	config := Config{Port: serverPort, CommunityStrings: []string{"public"}, Namespace: "totoro"}
-	mockSender, trapListener := listenerTestSetup(t, config)
+	config := &config.TrapsConfig{Port: serverPort, CommunityStrings: []string{"public"}, Namespace: "totoro"}
+	mockSender, trapListener, status := listenerTestSetup(t, config)
 	defer trapListener.Stop()
 
 	sendTestV2Trap(t, config, "wrong-community")
-	_, err2 := receivePacket(t, trapListener, defaultTimeout)
+	_, err2 := receivePacket(t, trapListener, defaultTimeout, status)
 	require.EqualError(t, err2, "invalid packet")
 
 	mockSender.AssertMetric(t, "Count", "datadog.snmp_traps.received", 1, "", []string{"snmp_device:127.0.0.1", "device_namespace:totoro", "snmp_version:2"})
@@ -89,9 +89,9 @@ func TestServerV2BadCredentials(t *testing.T) {
 }
 
 func TestServerV3(t *testing.T) {
-	userV3 := UserV3{Username: "user", AuthKey: "password", AuthProtocol: "sha", PrivKey: "password", PrivProtocol: "aes"}
-	config := Config{Port: serverPort, Users: []UserV3{userV3}}
-	_, trapListener := listenerTestSetup(t, config)
+	userV3 := config.UserV3{Username: "user", AuthKey: "password", AuthProtocol: "sha", PrivKey: "password", PrivProtocol: "aes"}
+	config := &config.TrapsConfig{Port: serverPort, Users: []config.UserV3{userV3}}
+	_, trapListener, status := listenerTestSetup(t, config)
 	defer trapListener.Stop()
 
 	sendTestV3Trap(t, config, &gosnmp.UsmSecurityParameters{
@@ -102,15 +102,15 @@ func TestServerV3(t *testing.T) {
 		PrivacyPassphrase:        "password",
 		PrivacyProtocol:          gosnmp.AES,
 	})
-	packet, err := receivePacket(t, trapListener, defaultTimeout)
+	packet, err := receivePacket(t, trapListener, defaultTimeout, status)
 	require.NoError(t, err)
 	assertVariables(t, packet)
 }
 
 func TestServerV3BadCredentials(t *testing.T) {
-	userV3 := UserV3{Username: "user", AuthKey: "password", AuthProtocol: "sha", PrivKey: "password", PrivProtocol: "aes"}
-	config := Config{Port: serverPort, Users: []UserV3{userV3}}
-	_, trapListener := listenerTestSetup(t, config)
+	userV3 := config.UserV3{Username: "user", AuthKey: "password", AuthProtocol: "sha", PrivKey: "password", PrivProtocol: "aes"}
+	config := &config.TrapsConfig{Port: serverPort, Users: []config.UserV3{userV3}}
+	_, trapListener, _ := listenerTestSetup(t, config)
 	defer trapListener.Stop()
 
 	sendTestV3Trap(t, config, &gosnmp.UsmSecurityParameters{
@@ -125,17 +125,17 @@ func TestServerV3BadCredentials(t *testing.T) {
 }
 
 func TestListenerTrapsReceivedTelemetry(t *testing.T) {
-	config := Config{Port: serverPort, CommunityStrings: []string{"public"}, Namespace: "totoro"}
-	mockSender, trapListener := listenerTestSetup(t, config)
+	config := &config.TrapsConfig{Port: serverPort, CommunityStrings: []string{"public"}, Namespace: "totoro"}
+	mockSender, trapListener, status := listenerTestSetup(t, config)
 	defer trapListener.Stop()
 
 	sendTestV1GenericTrap(t, config, "public")
-	_, err2 := receivePacket(t, trapListener, defaultTimeout) // Wait for packet
+	_, err2 := receivePacket(t, trapListener, defaultTimeout, status) // Wait for packet
 	require.NoError(t, err2)
 	mockSender.AssertMetric(t, "Count", "datadog.snmp_traps.received", 1, "", []string{"snmp_device:127.0.0.1", "device_namespace:totoro", "snmp_version:1"})
 }
 
-func receivePacket(t *testing.T, listener *TrapListener, timeoutDuration time.Duration) (*SnmpPacket, error) {
+func receivePacket(t *testing.T, listener *TrapListener, timeoutDuration time.Duration, status status.Manager) (*packet.SnmpPacket, error) {
 	timeout := time.After(timeoutDuration)
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
@@ -147,7 +147,7 @@ func receivePacket(t *testing.T, listener *TrapListener, timeoutDuration time.Du
 		case packet := <-listener.packets:
 			return packet, nil
 		case <-ticker.C:
-			if trapsPacketsAuthErrors.Value() > initialTrapsPacketsAuthErrors {
+			if status.GetTrapsPacketsAuthErrors() > 0 {
 				// invalid packet/bad credentials
 				return nil, errors.New("invalid packet")
 			}

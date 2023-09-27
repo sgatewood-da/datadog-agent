@@ -5,7 +5,7 @@
 
 //go:build !serverless
 
-package traps
+package listener
 
 import (
 	"net"
@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DataDog/datadog-agent/pkg/snmp/traps/config"
+	"github.com/DataDog/datadog-agent/pkg/snmp/traps/packet"
 	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,9 +81,8 @@ var (
 	}
 )
 
-func getFreePort() uint16 {
-	// sender := mocksender.NewMockSender("")
-
+// GetFreePort finds a free port to use for testing.
+func GetFreePort() uint16 {
 	var port uint16
 	for i := 0; i < 5; i++ {
 		conn, err := net.ListenPacket("udp", ":0")
@@ -93,11 +94,6 @@ func getFreePort() uint16 {
 		if err != nil {
 			continue
 		}
-		// listener, err := startSNMPTrapListener(Config{Port: port}, sender, nil, nil)
-		// if err != nil {
-		// 	continue
-		// }
-		// listener.Stop()
 		return port
 	}
 	panic("unable to find free port for starting the trap listener")
@@ -116,7 +112,7 @@ func parsePort(addr string) (uint16, error) {
 	return uint16(port), nil
 }
 
-func sendTestV1GenericTrap(t *testing.T, trapConfig Config, community string) *gosnmp.GoSNMP {
+func sendTestV1GenericTrap(t *testing.T, trapConfig *config.TrapsConfig, community string) *gosnmp.GoSNMP {
 	params, err := trapConfig.BuildSNMPParams(nil)
 	require.NoError(t, err)
 	params.Community = community
@@ -134,7 +130,7 @@ func sendTestV1GenericTrap(t *testing.T, trapConfig Config, community string) *g
 	return params
 }
 
-func sendTestV1SpecificTrap(t *testing.T, trapConfig Config, community string) *gosnmp.GoSNMP {
+func sendTestV1SpecificTrap(t *testing.T, trapConfig *config.TrapsConfig, community string) *gosnmp.GoSNMP {
 	params, err := trapConfig.BuildSNMPParams(nil)
 	require.NoError(t, err)
 	params.Community = community
@@ -152,7 +148,7 @@ func sendTestV1SpecificTrap(t *testing.T, trapConfig Config, community string) *
 	return params
 }
 
-func sendTestV2Trap(t *testing.T, trapConfig Config, community string) *gosnmp.GoSNMP {
+func sendTestV2Trap(t *testing.T, trapConfig *config.TrapsConfig, community string) *gosnmp.GoSNMP {
 	params, err := trapConfig.BuildSNMPParams(nil)
 	require.NoError(t, err)
 	params.Community = community
@@ -170,7 +166,7 @@ func sendTestV2Trap(t *testing.T, trapConfig Config, community string) *gosnmp.G
 	return params
 }
 
-func sendTestV3Trap(t *testing.T, trapConfig Config, securityParams *gosnmp.UsmSecurityParameters) *gosnmp.GoSNMP {
+func sendTestV3Trap(t *testing.T, trapConfig *config.TrapsConfig, securityParams *gosnmp.UsmSecurityParameters) *gosnmp.GoSNMP {
 	params, err := trapConfig.BuildSNMPParams(nil)
 	require.NoError(t, err)
 	params.MsgFlags = gosnmp.AuthPriv
@@ -189,7 +185,7 @@ func sendTestV3Trap(t *testing.T, trapConfig Config, securityParams *gosnmp.UsmS
 	return params
 }
 
-func assertIsValidV2Packet(t *testing.T, packet *SnmpPacket, trapConfig Config) {
+func assertIsValidV2Packet(t *testing.T, packet *packet.SnmpPacket, trapConfig *config.TrapsConfig) {
 	require.Equal(t, gosnmp.Version2c, packet.Content.Version)
 	communityValid := false
 	for _, community := range trapConfig.CommunityStrings {
@@ -200,7 +196,7 @@ func assertIsValidV2Packet(t *testing.T, packet *SnmpPacket, trapConfig Config) 
 	require.True(t, communityValid)
 }
 
-func assertVariables(t *testing.T, packet *SnmpPacket) {
+func assertVariables(t *testing.T, packet *packet.SnmpPacket) {
 	variables := packet.Content.Variables
 	assert.Equal(t, 4, len(variables))
 
