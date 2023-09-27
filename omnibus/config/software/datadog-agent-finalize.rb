@@ -135,7 +135,7 @@ build do
             move "#{install_dir}/etc/datadog-agent/compliance.d", "/etc/datadog-agent"
 
             # Move SELinux policy
-            if debian? || redhat?
+            if (debian? || redhat?) && !suse_target?
               move "#{install_dir}/etc/datadog-agent/selinux", "/etc/datadog-agent/selinux"
             end
 

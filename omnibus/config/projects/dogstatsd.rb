@@ -35,7 +35,8 @@ else
     if redhat?
       runtime_script_dependency :pre, "glibc-common"
       runtime_script_dependency :pre, "shadow-utils"
-    else
+    end
+    if suse_target?
       runtime_script_dependency :pre, "glibc"
       runtime_script_dependency :pre, "shadow"
     end

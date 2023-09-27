@@ -149,7 +149,7 @@ build do
   end
 
   # Add SELinux policy for system-probe
-  if debian? || redhat?
+  if (debian? || redhat?) && !suse_target?
     mkdir "#{conf_dir}/selinux"
     command "inv -e selinux.compile-system-probe-policy-file --output-directory #{conf_dir}/selinux", env: env
   end

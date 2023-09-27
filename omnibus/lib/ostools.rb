@@ -13,6 +13,10 @@ def suse?()
     return %w(suse).include? ohai['platform_family']
 end
 
+def suse_target?()
+    return suse? || ENV['AGENT_TARGET_PLATFORM'] == 'suse'
+end
+
 def debian?()
     return ohai['platform_family'] == 'debian'
 end
