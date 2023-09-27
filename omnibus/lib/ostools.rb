@@ -14,7 +14,7 @@ def suse?()
 end
 
 def suse_target?()
-    return suse? || ENV['AGENT_TARGET_PLATFORM'] == 'suse'
+    return suse? || ENV['AGENT_TARGET_OS'] == 'suse'
 end
 
 def debian?()
