@@ -31,6 +31,12 @@ func (e *Extractor) Extract(event interface{}) (*TraceContext, error) {
 	var err error
 	switch ev := event.(type) {
 	case events.SQSMessage:
+		if attr, ok := ev.Attributes[awsTraceHeader]; ok {
+			if tc, err := extractTraceContextfromAWSTraceHeader(attr); err == nil {
+				// Return early if AWSTraceHeader contains trace context
+				return tc, nil
+			}
+		}
 		carrier, err = sqsMessageCarrier(ev)
 	default:
 		err = errors.New("Unsupported event type for trace context extraction")
@@ -42,7 +48,6 @@ func (e *Extractor) Extract(event interface{}) (*TraceContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: extract sampling priority
 	return &TraceContext{
 		TraceID:  sp.TraceID(),
 		ParentID: sp.SpanID(),

@@ -15,14 +15,16 @@ type propID struct {
 }
 
 var (
-	ddTraceID  = propID{1111111111111111111, "1111111111111111111"}
-	ddSpanID   = propID{2222222222222222222, "2222222222222222222"}
-	w3cTraceID = propID{3333333333333333333, "2e426101834d5555"}
-	w3cSpanID  = propID{4444444444444444444, "3dadd6acaf11c71c"}
+	ddTraceID  = propID{1, "0000000000000000001"}
+	ddSpanID   = propID{2, "0000000000000000002"}
+	w3cTraceID = propID{3, "0000000000000003"}
+	w3cSpanID  = propID{4, "0000000000000004"}
 )
 
 var (
-	headersAll = `{
+	headersNone  = ""
+	headersEmpty = "{}"
+	headersAll   = `{
 		"x-datadog-trace-id": "` + ddTraceID.asStr + `",
 		"x-datadog-parent-id": "` + ddSpanID.asStr + `",
 		"x-datadog-sampling-priority": "1",
@@ -41,27 +43,32 @@ var (
 		"tracestate": "dd=s:1;t.dm:-0"
 	}`
 
-	eventSqsMessage = func(hdrs string) events.SQSMessage {
-		return events.SQSMessage{
-			MessageAttributes: map[string]events.SQSMessageAttribute{
+	eventSqsMessage = func(sqsHdrs, snsHdrs, awsHdr string) events.SQSMessage {
+		e := events.SQSMessage{}
+		if sqsHdrs != "" {
+			e.MessageAttributes = map[string]events.SQSMessageAttribute{
 				"_datadog": events.SQSMessageAttribute{
 					DataType:    "String",
-					StringValue: aws.String(hdrs),
+					StringValue: aws.String(sqsHdrs),
 				},
-			},
+			}
 		}
-	}
-	eventSnsSqsMessage = func(hdrs string) events.SQSMessage {
-		return events.SQSMessage{
-			Body: `{
-					"MessageAttributes": {
-						"_datadog": {
-							"Type": "Binary",
-							"Value": "` + base64.StdEncoding.EncodeToString([]byte(hdrs)) + `"
-						}
+		if snsHdrs != "" {
+			e.Body = `{
+				"MessageAttributes": {
+					"_datadog": {
+						"Type": "Binary",
+						"Value": "` + base64.StdEncoding.EncodeToString([]byte(snsHdrs)) + `"
 					}
-				}`,
+				}
+			}`
 		}
+		if awsHdr != "" {
+			e.Attributes = map[string]string{
+				awsTraceHeader: awsHdr,
+			}
+		}
+		return e
 	}
 )
 
@@ -96,13 +103,13 @@ func TestExtractorExtract(t *testing.T) {
 		},
 		{
 			name:     "extraction-error",
-			event:    eventSqsMessage("{}"),
+			event:    eventSqsMessage(headersEmpty, headersNone, headersNone),
 			expCtx:   nil,
 			expNoErr: false,
 		},
 		{
 			name:  "extract-from-sqs",
-			event: eventSqsMessage(headersAll),
+			event: eventSqsMessage(headersAll, headersNone, headersNone),
 			expCtx: &TraceContext{
 				TraceID:  w3cTraceID.asUint,
 				ParentID: w3cSpanID.asUint,
@@ -111,7 +118,7 @@ func TestExtractorExtract(t *testing.T) {
 		},
 		{
 			name:  "extract-from-snssqs",
-			event: eventSnsSqsMessage(headersAll),
+			event: eventSqsMessage(headersNone, headersAll, headersNone),
 			expCtx: &TraceContext{
 				TraceID:  w3cTraceID.asUint,
 				ParentID: w3cSpanID.asUint,
@@ -189,7 +196,7 @@ func TestPropagationStyle(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("DD_TRACE_PROPAGATION_STYLE", tc.propType)
 			extractor := NewExtractor()
-			event := eventSqsMessage(tc.hdrs)
+			event := eventSqsMessage(tc.hdrs, headersNone, headersNone)
 			ctx, err := extractor.Extract(event)
 			t.Logf("Extract returned TraceContext=%#v error=%#v", ctx, err)
 			if tc.expTraceID == 0 {
