@@ -4,8 +4,11 @@ import (
 	"errors"
 
 	"github.com/aws/aws-lambda-go/events"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
+
+const defaultPriority int = 0
 
 type Extractor struct {
 	propagator tracer.Propagator
@@ -14,6 +17,7 @@ type Extractor struct {
 type TraceContext struct {
 	TraceID  uint64
 	ParentID uint64
+	Priority int
 }
 
 func NewExtractor() Extractor {
@@ -51,7 +55,18 @@ func (e *Extractor) Extract(event interface{}) (*TraceContext, error) {
 	return &TraceContext{
 		TraceID:  sp.TraceID(),
 		ParentID: sp.SpanID(),
+		Priority: getPriority(sp),
 	}, nil
+}
+
+func getPriority(sp ddtrace.SpanContext) (priority int) {
+	priority = defaultPriority
+	if pc, ok := sp.(interface{ SamplingPriority() (int, bool) }); ok {
+		if p, ok := pc.SamplingPriority(); ok {
+			priority = p
+		}
+	}
+	return
 }
 
 type kvTextMap map[string]string

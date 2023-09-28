@@ -9,45 +9,66 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type propID struct {
+type uintItem struct {
 	asUint uint64
 	asStr  string
 }
+type intItem struct {
+	asInt int
+	asStr string
+}
+type context struct {
+	trace    uintItem
+	span     uintItem
+	priority intItem
+}
 
 var (
-	ddTraceID     = propID{1, "0000000000000000001"}
-	ddSpanID      = propID{2, "0000000000000000002"}
-	w3cTraceID    = propID{3, "0000000000000003"}
-	w3cSpanID     = propID{4, "0000000000000004"}
-	ddxrayTraceID = propID{5, "0000000000000000005"}
-	ddxraySpanID  = propID{6, "0000000000000000006"}
-	xrayTraceID   = propID{7, "0000000000000000007"}
-	xraySpanID    = propID{8, "0000000000000000008"}
+	dd = context{
+		trace:    uintItem{1, "0000000000000000001"},
+		span:     uintItem{2, "0000000000000000002"},
+		priority: intItem{2, "2"},
+	}
+	w3c = context{
+		trace:    uintItem{3, "0000000000000003"},
+		span:     uintItem{4, "0000000000000004"},
+		priority: intItem{3, "3"},
+	}
+	ddx = context{
+		trace:    uintItem{5, "0000000000000000005"},
+		span:     uintItem{6, "0000000000000000006"},
+		priority: intItem{0, "0"},
+	}
+	x = context{
+		trace:    uintItem{7, "0000000000000000007"},
+		span:     uintItem{8, "0000000000000000008"},
+		priority: intItem{0, "0"},
+	}
 )
 
 var (
 	headersNone  = ""
 	headersEmpty = "{}"
 	headersAll   = `{
-		"x-datadog-trace-id": "` + ddTraceID.asStr + `",
-		"x-datadog-parent-id": "` + ddSpanID.asStr + `",
-		"x-datadog-sampling-priority": "1",
+		"x-datadog-trace-id": "` + dd.trace.asStr + `",
+		"x-datadog-parent-id": "` + dd.span.asStr + `",
+		"x-datadog-sampling-priority": "` + dd.priority.asStr + `",
 		"x-datadog-tags": "_dd.p.dm=-0",
-		"traceparent": "00-0000000000000000` + w3cTraceID.asStr + "-" + w3cSpanID.asStr + `-01",
-		"tracestate": "dd=s:1;t.dm:-0"
+		"traceparent": "00-0000000000000000` + w3c.trace.asStr + "-" + w3c.span.asStr + `-01",
+		"tracestate": "dd=s:` + w3c.priority.asStr + `;t.dm:-0"
 	}`
 	headersDD = `{
-		"x-datadog-trace-id": "` + ddTraceID.asStr + `",
-		"x-datadog-parent-id": "` + ddSpanID.asStr + `",
-		"x-datadog-sampling-priority": "1",
+		"x-datadog-trace-id": "` + dd.trace.asStr + `",
+		"x-datadog-parent-id": "` + dd.span.asStr + `",
+		"x-datadog-sampling-priority": "` + dd.priority.asStr + `",
 		"x-datadog-tags": "_dd.p.dm=-0"
 	}`
 	headersW3C = `{
-		"traceparent": "00-0000000000000000` + w3cTraceID.asStr + "-" + w3cSpanID.asStr + `-01",
-		"tracestate": "dd=s:1;t.dm:-0"
+		"traceparent": "00-0000000000000000` + w3c.trace.asStr + "-" + w3c.span.asStr + `-01",
+		"tracestate": "dd=s:` + w3c.priority.asStr + `;t.dm:-0"
 	}`
-	headersDdXray = "Root=1-00000000-00000000" + ddxrayTraceID.asStr + ";Parent=" + ddxraySpanID.asStr
-	headersXray   = "Root=1-12345678-12345678" + xrayTraceID.asStr + ";Parent=" + xraySpanID.asStr
+	headersDdXray = "Root=1-00000000-00000000" + ddx.trace.asStr + ";Parent=" + ddx.span.asStr
+	headersXray   = "Root=1-12345678-12345678" + x.trace.asStr + ";Parent=" + x.span.asStr
 
 	eventSqsMessage = func(sqsHdrs, snsHdrs, awsHdr string) events.SQSMessage {
 		e := events.SQSMessage{}
@@ -117,8 +138,9 @@ func TestExtractorExtract(t *testing.T) {
 			name:  "extract-from-sqs",
 			event: eventSqsMessage(headersAll, headersNone, headersNone),
 			expCtx: &TraceContext{
-				TraceID:  w3cTraceID.asUint,
-				ParentID: w3cSpanID.asUint,
+				TraceID:  w3c.trace.asUint,
+				ParentID: w3c.span.asUint,
+				Priority: w3c.priority.asInt,
 			},
 			expNoErr: true,
 		},
@@ -126,8 +148,9 @@ func TestExtractorExtract(t *testing.T) {
 			name:  "extract-from-snssqs",
 			event: eventSqsMessage(headersNone, headersAll, headersNone),
 			expCtx: &TraceContext{
-				TraceID:  w3cTraceID.asUint,
-				ParentID: w3cSpanID.asUint,
+				TraceID:  w3c.trace.asUint,
+				ParentID: w3c.span.asUint,
+				Priority: w3c.priority.asInt,
 			},
 			expNoErr: true,
 		},
@@ -135,8 +158,9 @@ func TestExtractorExtract(t *testing.T) {
 			name:  "extract-from-sqs-attrs",
 			event: eventSqsMessage(headersW3C, headersDD, headersDdXray),
 			expCtx: &TraceContext{
-				TraceID:  ddxrayTraceID.asUint,
-				ParentID: ddxraySpanID.asUint,
+				TraceID:  ddx.trace.asUint,
+				ParentID: ddx.span.asUint,
+				Priority: ddx.priority.asInt,
 			},
 			expNoErr: true,
 		},
@@ -144,8 +168,9 @@ func TestExtractorExtract(t *testing.T) {
 			name:  "sqs-precidence-attrs",
 			event: eventSqsMessage(headersW3C, headersDD, headersDdXray),
 			expCtx: &TraceContext{
-				TraceID:  ddxrayTraceID.asUint,
-				ParentID: ddxraySpanID.asUint,
+				TraceID:  ddx.trace.asUint,
+				ParentID: ddx.span.asUint,
+				Priority: ddx.priority.asInt,
 			},
 			expNoErr: true,
 		},
@@ -153,8 +178,9 @@ func TestExtractorExtract(t *testing.T) {
 			name:  "sqs-precidence-sqs",
 			event: eventSqsMessage(headersW3C, headersDD, headersXray),
 			expCtx: &TraceContext{
-				TraceID:  w3cTraceID.asUint,
-				ParentID: w3cSpanID.asUint,
+				TraceID:  w3c.trace.asUint,
+				ParentID: w3c.span.asUint,
+				Priority: w3c.priority.asInt,
 			},
 			expNoErr: true,
 		},
@@ -162,8 +188,9 @@ func TestExtractorExtract(t *testing.T) {
 			name:  "sqs-precidence-snssqs",
 			event: eventSqsMessage(headersNone, headersDD, headersXray),
 			expCtx: &TraceContext{
-				TraceID:  ddTraceID.asUint,
-				ParentID: ddSpanID.asUint,
+				TraceID:  dd.trace.asUint,
+				ParentID: dd.span.asUint,
+				Priority: dd.priority.asInt,
 			},
 			expNoErr: true,
 		},
@@ -191,19 +218,19 @@ func TestPropagationStyle(t *testing.T) {
 			name:       "no-type-headers-all",
 			propType:   "",
 			hdrs:       headersAll,
-			expTraceID: w3cTraceID.asUint,
+			expTraceID: w3c.trace.asUint,
 		},
 		{
 			name:       "datadog-type-headers-all",
 			propType:   "datadog",
 			hdrs:       headersAll,
-			expTraceID: ddTraceID.asUint,
+			expTraceID: dd.trace.asUint,
 		},
 		{
 			name:       "tracecontet-type-headers-all",
 			propType:   "tracecontext",
 			hdrs:       headersAll,
-			expTraceID: w3cTraceID.asUint,
+			expTraceID: w3c.trace.asUint,
 		},
 		{
 			// XXX: This is surprising
@@ -212,13 +239,13 @@ func TestPropagationStyle(t *testing.T) {
 			name:       "datadog,tracecontext-type-headers-all",
 			propType:   "datadog,tracecontext",
 			hdrs:       headersAll,
-			expTraceID: w3cTraceID.asUint,
+			expTraceID: w3c.trace.asUint,
 		},
 		{
 			name:       "tracecontext,datadog-type-headers-all",
 			propType:   "tracecontext,datadog",
 			hdrs:       headersAll,
-			expTraceID: w3cTraceID.asUint,
+			expTraceID: w3c.trace.asUint,
 		},
 		{
 			name:       "datadog-type-headers-w3c",
