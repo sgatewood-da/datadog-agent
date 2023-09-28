@@ -15,10 +15,14 @@ type propID struct {
 }
 
 var (
-	ddTraceID  = propID{1, "0000000000000000001"}
-	ddSpanID   = propID{2, "0000000000000000002"}
-	w3cTraceID = propID{3, "0000000000000003"}
-	w3cSpanID  = propID{4, "0000000000000004"}
+	ddTraceID     = propID{1, "0000000000000000001"}
+	ddSpanID      = propID{2, "0000000000000000002"}
+	w3cTraceID    = propID{3, "0000000000000003"}
+	w3cSpanID     = propID{4, "0000000000000004"}
+	ddxrayTraceID = propID{5, "0000000000000000005"}
+	ddxraySpanID  = propID{6, "0000000000000000006"}
+	xrayTraceID   = propID{7, "0000000000000000007"}
+	xraySpanID    = propID{8, "0000000000000000008"}
 )
 
 var (
@@ -36,12 +40,14 @@ var (
 		"x-datadog-trace-id": "` + ddTraceID.asStr + `",
 		"x-datadog-parent-id": "` + ddSpanID.asStr + `",
 		"x-datadog-sampling-priority": "1",
-		"x-datadog-tags": "_dd.p.dm=-0",
+		"x-datadog-tags": "_dd.p.dm=-0"
 	}`
 	headersW3C = `{
 		"traceparent": "00-0000000000000000` + w3cTraceID.asStr + "-" + w3cSpanID.asStr + `-01",
 		"tracestate": "dd=s:1;t.dm:-0"
 	}`
+	headersDdXray = "Root=1-00000000-00000000" + ddxrayTraceID.asStr + ";Parent=" + ddxraySpanID.asStr
+	headersXray   = "Root=1-12345678-12345678" + xrayTraceID.asStr + ";Parent=" + xraySpanID.asStr
 
 	eventSqsMessage = func(sqsHdrs, snsHdrs, awsHdr string) events.SQSMessage {
 		e := events.SQSMessage{}
@@ -122,6 +128,42 @@ func TestExtractorExtract(t *testing.T) {
 			expCtx: &TraceContext{
 				TraceID:  w3cTraceID.asUint,
 				ParentID: w3cSpanID.asUint,
+			},
+			expNoErr: true,
+		},
+		{
+			name:  "extract-from-sqs-attrs",
+			event: eventSqsMessage(headersW3C, headersDD, headersDdXray),
+			expCtx: &TraceContext{
+				TraceID:  ddxrayTraceID.asUint,
+				ParentID: ddxraySpanID.asUint,
+			},
+			expNoErr: true,
+		},
+		{
+			name:  "sqs-precidence-attrs",
+			event: eventSqsMessage(headersW3C, headersDD, headersDdXray),
+			expCtx: &TraceContext{
+				TraceID:  ddxrayTraceID.asUint,
+				ParentID: ddxraySpanID.asUint,
+			},
+			expNoErr: true,
+		},
+		{
+			name:  "sqs-precidence-sqs",
+			event: eventSqsMessage(headersW3C, headersDD, headersXray),
+			expCtx: &TraceContext{
+				TraceID:  w3cTraceID.asUint,
+				ParentID: w3cSpanID.asUint,
+			},
+			expNoErr: true,
+		},
+		{
+			name:  "sqs-precidence-snssqs",
+			event: eventSqsMessage(headersNone, headersDD, headersXray),
+			expCtx: &TraceContext{
+				TraceID:  ddTraceID.asUint,
+				ParentID: ddSpanID.asUint,
 			},
 			expNoErr: true,
 		},
