@@ -105,8 +105,6 @@ func Commands(globalParams *command.GlobalParams) []*cobra.Command {
 					return workloadmeta.Params{AgentType: catalog}
 				}),
 
-				fx.Invoke(command.SetHostMountEnv),
-
 				processComponent.Bundle,
 			)
 		},
