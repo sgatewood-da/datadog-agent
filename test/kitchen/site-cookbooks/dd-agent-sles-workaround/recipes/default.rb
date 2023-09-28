@@ -11,6 +11,7 @@ if node['platform_family'] == 'suse'
   # Update the waagent conf to stop watching hostname changes.
   execute 'update Azure Agent conf' do
     command "sed -i 's/Provisioning\\.MonitorHostName=y/Provisioning\\.MonitorHostName=n/' /etc/waagent.conf"
+    only_if { ::File.exist?('/etc/waagent.conf') }
   end
 
   # Change the Windows Azure Agent conf to stop watching hostname changes.
@@ -20,10 +21,12 @@ if node['platform_family'] == 'suse'
   service 'waagent' do
     service_name "waagent"
     action :restart
+    only_if { ::File.exist?('/etc/waagent.conf') }
   end
 
   # Put eth0 back up in case the waagent was taking it down while we restarted it.
   execute 'bring eth0 up' do
     command "/sbin/ifup eth0"
+    only_if { ::File.exist?('/etc/waagent.conf') }
   end
 end
