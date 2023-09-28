@@ -82,8 +82,6 @@ func setUpCollectorTest(t *testing.T) *collectorTest {
 		"workloadmeta.remote_process_collector.enabled": true,
 	}
 
-	// FIXME(components): these tests will remain broken until we adopt the actual mock workloadmeta
-	//                    component.
 	store := fxutil.Test[workloadmeta.Mock](t, fx.Options(
 		core.MockBundle,
 		fx.Replace(compcfg.MockParams{Overrides: overrides}),
@@ -114,6 +112,8 @@ func setUpCollectorTest(t *testing.T) *collectorTest {
 	require.NoError(t, c.Start(ctx, store))
 	t.Cleanup(cancel)
 
+	time.Sleep(5 * time.Second)
+
 	return &collectorTest{
 		collector: c,
 		probe:     probe,
@@ -121,6 +121,7 @@ func setUpCollectorTest(t *testing.T) *collectorTest {
 		store:     store,
 		stream:    acquireStream(t, port),
 	}
+
 }
 
 func (c *collectorTest) setupProcs() {
