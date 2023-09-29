@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/DataDog/datadog-agent/pkg/networkdevice/profile/profiledefinition"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"io"
 )
 
@@ -39,6 +40,12 @@ func loadZipProfiles() (profileConfigMap, error) {
 				if profile.Profile.Name == "" {
 					//return nil, fmt.Errorf("a profile from zip have a missing name")
 					// TODO: raise error?
+					continue
+				}
+
+				if _, exist := profiles[profile.Profile.Name]; exist {
+					// TODO: this should not happen
+					log.Warnf("duplicate profile found: %s", profile.Profile.Name)
 					continue
 				}
 				profiles[profile.Profile.Name] = profileConfig{Definition: profile.Profile}
