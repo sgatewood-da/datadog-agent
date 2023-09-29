@@ -508,7 +508,11 @@ func NewCheckConfig(rawInstance integration.Data, rawInitConfig integration.Data
 		}
 		profiles = customProfiles
 	} else if zipFileExist {
-		return nil, fmt.Errorf("HANDLE ZIP FILE")
+		defaultProfiles, err := loadZipProfiles()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load default profiles: %s", err)
+		}
+		profiles = defaultProfiles
 	} else {
 		defaultProfiles, err := loadDefaultProfiles()
 		if err != nil {
