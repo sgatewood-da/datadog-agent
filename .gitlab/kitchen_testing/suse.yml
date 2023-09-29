@@ -73,6 +73,8 @@ kitchen_suse_install_script_agent-a6:
     - .kitchen_test_install_script_agent
 
 kitchen_suse_install_script_agent-a6_arm64:
+  rules:
+    !reference [.on_all_kitchen_builds_a6]
   extends:
     - .kitchen_os_with_cws
     - .kitchen_scenario_suse_a6_arm64
