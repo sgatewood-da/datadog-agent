@@ -7,9 +7,11 @@ package checkconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"net"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -488,7 +490,14 @@ func NewCheckConfig(rawInstance integration.Data, rawInitConfig integration.Data
 		return nil, err
 	}
 
+	// TODO: Move profiles select logic to a separate function
 	// Profile Configs
+	zipFilePath := getProfileConfdRoot(profilesZipFile)
+	zipFileExist := false
+	if _, err := os.Stat(zipFilePath); errors.Is(err, os.ErrNotExist) {
+		zipFileExist = true
+	}
+
 	var profiles profileConfigMap
 	if len(initConfig.Profiles) > 0 {
 		// TODO: [PERFORMANCE] Load init config custom profiles once for all integrations
@@ -498,6 +507,8 @@ func NewCheckConfig(rawInstance integration.Data, rawInitConfig integration.Data
 			return nil, fmt.Errorf("failed to load custom profiles: %s", err)
 		}
 		profiles = customProfiles
+	} else if zipFileExist {
+		return nil, fmt.Errorf("HANDLE ZIP FILE")
 	} else {
 		defaultProfiles, err := loadDefaultProfiles()
 		if err != nil {

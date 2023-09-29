@@ -26,6 +26,7 @@ import (
 
 const defaultProfilesFolder = "default_profiles"
 const userProfilesFolder = "profiles"
+const profilesZipFile = "profiles.zip"
 
 var defaultProfilesMu = &sync.Mutex{}
 
