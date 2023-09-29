@@ -61,14 +61,14 @@ shared_examples "passes" do |bundle, env|
       # The json files are used to print failed tests at the end of the Gitlab job
       gotestsum_test2json_cmd = ["sudo", "-E",
         "/go/bin/gotestsum",
-        "--format", "testname",
+        "--format", "standard-verbose",
         "--junitfile", xmlpath,
         "--jsonfile", jsonpath,
         "--raw-command", "--",
         "/go/bin/test2json", "-t", "-p", "github.com/DataDog/datadog-agent/pkg/security/tests"
       ]
 
-      testsuite_args = ["-status-metrics", "-loglevel=debug", "-test.v", "-test.count=1"]
+      testsuite_args = ["-status-metrics", "-loglevel=debug", "-test.v", "-test.failfast", "-test.count=16", "-test.run", "TestLoadModule"]
       if bundle == "docker"
         testsuite_args.concat(["--env", "docker"])
         gotestsum_test2json_cmd.concat(["docker", "exec", "-e", "DD_SYSTEM_PROBE_BPF_DIR=#{final_env["DD_SYSTEM_PROBE_BPF_DIR"]}",
