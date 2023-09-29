@@ -50,11 +50,7 @@ namespace: profile-metadata
 collect_topology: false
 `)
 	// language=yaml
-	rawInitConfig := []byte(`
-profiles:
-  f5-big-ip:
-    definition_file: f5-big-ip.yaml
-`)
+	rawInitConfig := []byte(``)
 	senderManager := mocksender.CreateDefaultDemultiplexer()
 	err := chk.Configure(senderManager, integration.FakeConfigHash, rawInstanceConfig, rawInitConfig, "test")
 	assert.NoError(t, err)

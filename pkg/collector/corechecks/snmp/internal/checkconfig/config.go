@@ -494,7 +494,7 @@ func NewCheckConfig(rawInstance integration.Data, rawInitConfig integration.Data
 	// Profile Configs
 	zipFilePath := getProfileConfdRoot(profilesZipFile)
 	zipFileExist := false
-	if _, err := os.Stat(zipFilePath); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(zipFilePath); !errors.Is(err, os.ErrNotExist) {
 		zipFileExist = true
 	}
 
