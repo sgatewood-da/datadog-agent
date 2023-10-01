@@ -1,3 +1,6 @@
+time1 = Time.new
+puts "Start Time : " + time1.inspect
+
 root_dir = "/tmp/ci/system-probe"
 tests_dir = ::File.join(root_dir, "tests")
 
@@ -195,10 +198,15 @@ execute 'install docker-compose' do
   command <<-EOF
     for docker_file in $(ls); do
       echo docker load -i $docker_file
+      date
       docker load -i $docker_file
       rm -rf $docker_file
+      date
     done
   EOF
   user "root"
   live_stream true
 end
+
+time2 = Time.new
+puts "End Time : " + time2.inspect
