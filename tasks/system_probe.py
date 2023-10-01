@@ -781,7 +781,8 @@ def kitchen_prepare(ctx, windows=is_windows, kernel_release=None, ci=False, pack
         for extra in ["testdata", "build"]:
             extra_path = os.path.join(pkg, extra)
             if os.path.isdir(extra_path):
-                shutil.copytree(extra_path, os.path.join(target_path, extra))
+                shutil.copytree(extra_path, os.path.join(target_path, extra),
+                                ignore=shutil.ignore_patterns('runtime-security*', '*.bc', '*.bc.d', '*.c.d'))
 
         if pkg.endswith("java"):
             shutil.copy(os.path.join(pkg, "agent-usm.jar"), os.path.join(target_path, "agent-usm.jar"))
