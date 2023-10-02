@@ -26,11 +26,6 @@ const (
 	Fail        = "fail"
 )
 
-var metrics = map[string]string{
-	"gitlab": "connector_gitlab",
-	"vm":     "connector_vm",
-}
-
 type Args struct {
 	host                    string
 	user                    string
@@ -71,13 +66,9 @@ type ConnectorInfo struct {
 }
 
 func getConnectorInfo() (ConnectorInfo, error) {
-	connectorType := "vm"
+	connectorType := "metal_to_vm"
 	if _, ok := os.LookupEnv("GITLAB_CI"); ok {
-		connectorType = "gitlab"
-	}
-
-	if _, ok := metrics[connectorType]; !ok {
-		return ConnectorInfo{}, fmt.Errorf("unknown connector type: %s", connectorType)
+		connectorType = "gitlab_to_metal"
 	}
 
 	return ConnectorInfo{
@@ -120,9 +111,9 @@ func run() (err error) {
 	}
 
 	var failType string
-	status := Fail
+	result := Fail
 	defer func() {
-		if serr := submitExecutionMetric(cinfo, failType, status); serr != nil {
+		if serr := submitExecutionMetric(cinfo, failType, result); serr != nil {
 			err = serr
 		}
 	}()
@@ -156,13 +147,14 @@ func run() (err error) {
 		return fmt.Errorf("wait: %s", err)
 	}
 
-	status = Success
+	result = Success
 	return nil
 }
 
-func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricPayload {
+func buildMetric(cinfo ConnectorInfo, failType, result string) datadogV2.MetricPayload {
 	tags := []string{
-		fmt.Sprintf("status:%s", status),
+		fmt.Sprintf("result:%s", result),
+		fmt.Sprintf("connection_type:%s", cinfo.connectorType),
 	}
 	if failType != "" {
 		tags = append(tags, fmt.Sprintf("error:%s", failType))
@@ -170,7 +162,7 @@ func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricP
 	return datadogV2.MetricPayload{
 		Series: []datadogV2.MetricSeries{
 			{
-				Metric: metrics[cinfo.connectorType],
+				Metric: "datadog.e2e.system_probe.ssh.commands",
 				Type:   datadogV2.METRICINTAKETYPE_COUNT.Ptr(),
 				Points: []datadogV2.MetricPoint{
 					{
@@ -184,13 +176,13 @@ func buildMetric(cinfo ConnectorInfo, failType, status string) datadogV2.MetricP
 	}
 }
 
-func submitExecutionMetric(cinfo ConnectorInfo, failType, status string) error {
+func submitExecutionMetric(cinfo ConnectorInfo, failType, result string) error {
 	if _, ok := os.LookupEnv("DD_API_KEY"); !ok {
 		fmt.Fprintf(os.Stderr, "skipping sending metric because DD_API_KEY not present")
 		return nil
 	}
 
-	metricBody := buildMetric(cinfo, failType, status)
+	metricBody := buildMetric(cinfo, failType, result)
 
 	ctx := datadog.NewDefaultContext(context.Background())
 	configuration := datadog.NewConfiguration()
