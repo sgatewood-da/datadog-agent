@@ -38,8 +38,15 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/config"
 	netlink "github.com/DataDog/datadog-agent/pkg/network/netlink/testutil"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/amqp"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http/testutil"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/kafka"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/mongo"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/mysql"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/postgres"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/redis"
+	protocolsUtils "github.com/DataDog/datadog-agent/pkg/network/protocols/testutil"
 	gotlstestutil "github.com/DataDog/datadog-agent/pkg/network/protocols/tls/gotls/testutil"
 	javatestutil "github.com/DataDog/datadog-agent/pkg/network/protocols/tls/java/testutil"
 	prototls "github.com/DataDog/datadog-agent/pkg/network/protocols/tls/openssl"
@@ -575,7 +582,66 @@ func isRequestIncluded(allStats map[http.Key]*http.RequestStats, req *nethttp.Re
 	return false
 }
 
-func (s *USMSuite) TestProtocolClassification() {
+type ProtocolClassificationSuite struct {
+	suite.Suite
+
+	cachedServers map[string]*protocolsUtils.Server
+}
+
+func TestProtocolClassificationSuite(t *testing.T) {
+	s := &ProtocolClassificationSuite{
+		cachedServers: make(map[string]*protocolsUtils.Server),
+	}
+
+	s.loadTestServers(t)
+	// Setup docker servers
+	ebpftest.TestBuildModes(t, []ebpftest.BuildMode{ebpftest.Prebuilt, ebpftest.RuntimeCompiled, ebpftest.CORE}, "", func(t *testing.T) {
+		suite.Run(t, s)
+	})
+}
+
+var (
+	protocolList = map[string]struct {
+		port     string
+		callback func(testing.TB, string, string) (*protocolsUtils.Server, error)
+	}{
+		"kafka": {
+			port:     kafkaPort,
+			callback: kafka.RunServer,
+		},
+		"mysql": {
+			port:     mysqlPort,
+			callback: mysql.RunServer,
+		},
+		"postgres": {
+			port:     postgresPort,
+			callback: postgres.RunServer,
+		},
+		"mongo": {
+			port:     mongoPort,
+			callback: mongo.RunServer,
+		},
+		"redis": {
+			port:     redisPort,
+			callback: redis.RunServer,
+		},
+		"amqp": {
+			port:     amqpPort,
+			callback: amqp.RunServer,
+		},
+	}
+)
+
+func (s *ProtocolClassificationSuite) loadTestServers(t *testing.T) {
+	for key, entry := range protocolList {
+		srv, err := entry.callback(t, "127.0.0.1", entry.port)
+		require.NoError(t, err)
+		require.NoError(t, srv.Pause())
+		s.cachedServers[key] = srv
+	}
+}
+
+func (s *ProtocolClassificationSuite) TestProtocolClassification() {
 	t := s.T()
 	cfg := testConfig()
 	if !classificationSupported(cfg) {
@@ -592,7 +658,7 @@ func (s *USMSuite) TestProtocolClassification() {
 	t.Run("with dnat", func(t *testing.T) {
 		// SetupDNAT sets up a NAT translation from 2.2.2.2 to 1.1.1.1
 		netlink.SetupDNAT(t)
-		testProtocolClassification(t, tr, "localhost", "2.2.2.2", "1.1.1.1")
+		testProtocolClassification(t, tr, "localhost", "2.2.2.2", "1.1.1.1", s.cachedServers)
 		testHTTPSClassification(t, tr, "localhost", "2.2.2.2", "1.1.1.1")
 		testProtocolConnectionProtocolMapCleanup(t, tr, "localhost", "2.2.2.2", "1.1.1.1:0")
 	})
@@ -600,13 +666,13 @@ func (s *USMSuite) TestProtocolClassification() {
 	t.Run("with snat", func(t *testing.T) {
 		// SetupDNAT sets up a NAT translation from 6.6.6.6 to 7.7.7.7
 		netlink.SetupSNAT(t)
-		testProtocolClassification(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1")
+		testProtocolClassification(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1", s.cachedServers)
 		testHTTPSClassification(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1")
 		testProtocolConnectionProtocolMapCleanup(t, tr, "6.6.6.6", "127.0.0.1", "127.0.0.1:0")
 	})
 
 	t.Run("without nat", func(t *testing.T) {
-		testProtocolClassification(t, tr, "localhost", "127.0.0.1", "127.0.0.1")
+		testProtocolClassification(t, tr, "localhost", "127.0.0.1", "127.0.0.1", s.cachedServers)
 		testHTTPSClassification(t, tr, "localhost", "127.0.0.1", "127.0.0.1")
 		testProtocolConnectionProtocolMapCleanup(t, tr, "localhost", "127.0.0.1", "127.0.0.1:0")
 	})
@@ -748,7 +814,8 @@ func (s *USMSuite) TestJavaInjection() {
 				t.Cleanup(serverDoneFn)
 			},
 			postTracerSetup: func(t *testing.T, ctx testContext) {
-				require.NoError(t, javatestutil.RunJavaVersion(t, "openjdk:15-oraclelinux8", "Wget https://host.docker.internal:5443/200/anything/java-tls-request", regexp.MustCompile("Response code = .*")), "Failed running Java version")
+				_, err := javatestutil.RunJavaVersion(t, "openjdk:15-oraclelinux8", "Wget https://host.docker.internal:5443/200/anything/java-tls-request", regexp.MustCompile("Response code = .*"))
+				require.NoError(t, err, "Failed running Java version")
 			},
 			validation: func(t *testing.T, ctx testContext, tr *Tracer) {
 				// Iterate through active connections until we find connection created above
@@ -959,7 +1026,8 @@ func testHTTPsGoTLSCaptureNewProcessContainer(t *testing.T, cfg *config.Config) 
 
 	tr := setupTracer(t, cfg)
 
-	require.NoError(t, gotlstestutil.RunServer(t, serverPort))
+	_, err := gotlstestutil.RunServer(t, serverPort)
+	require.NoError(t, err)
 	reqs := make(requestsMap)
 	for i := 0; i < expectedOccurrences; i++ {
 		resp, err := client.Get(fmt.Sprintf("https://localhost:%s/status/%d", serverPort, 200+i))
@@ -978,7 +1046,8 @@ func testHTTPsGoTLSCaptureAlreadyRunningContainer(t *testing.T, cfg *config.Conf
 		expectedOccurrences = 10
 	)
 
-	require.NoError(t, gotlstestutil.RunServer(t, serverPort))
+	_, err := gotlstestutil.RunServer(t, serverPort)
+	require.NoError(t, err)
 
 	client := &nethttp.Client{
 		Transport: &nethttp.Transport{
@@ -1041,7 +1110,8 @@ func (s *USMSuite) TestTLSClassification() {
 			openSSLCommand: "-tls1_3",
 		},
 	}
-	require.NoError(t, prototls.RunServerOpenssl(t, "44330", len(scenarios), "-www"))
+	_, err := prototls.RunServerOpenssl(t, "44330", len(scenarios), "-www")
+	require.NoError(t, err)
 
 	tr := setupTracer(t, cfg)
 

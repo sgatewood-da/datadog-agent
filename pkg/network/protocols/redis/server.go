@@ -13,7 +13,7 @@ import (
 	protocolsUtils "github.com/DataDog/datadog-agent/pkg/network/protocols/testutil"
 )
 
-func RunServer(t testing.TB, serverAddr, serverPort string) error {
+func RunServer(t testing.TB, serverAddr, serverPort string) (*protocolsUtils.Server, error) {
 	env := []string{
 		"REDIS_ADDR=" + serverAddr,
 		"REDIS_PORT=" + serverPort,

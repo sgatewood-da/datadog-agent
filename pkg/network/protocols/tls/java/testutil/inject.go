@@ -28,7 +28,7 @@ import (
 )
 
 // RunJavaVersion run class under java version
-func RunJavaVersion(t testing.TB, version, class string, waitForParam ...*regexp.Regexp) error {
+func RunJavaVersion(t testing.TB, version, class string, waitForParam ...*regexp.Regexp) (*protocolsUtils.Server, error) {
 	t.Helper()
 	var waitFor *regexp.Regexp
 	if len(waitForParam) == 0 {
@@ -95,7 +95,8 @@ func RunJavaVersionAndWaitForRejection(t testing.TB, version, class string, wait
 	}
 	configureLoggerForTest(t, &l)
 
-	require.NoError(t, protocolsUtils.RunDockerServer(t, version, dir+"/../testdata/docker-compose.yml", env, waitForCondition, time.Second*15))
+	_, err := protocolsUtils.RunDockerServer(t, version, dir+"/../testdata/docker-compose.yml", env, waitForCondition, time.Second*15)
+	require.NoError(t, err)
 	pids, err := FindProcessByCommandLine("java", class)
 	require.NoError(t, err)
 	require.Lenf(t, pids, 1, "found more process (%d) than expected (1)", len(pids))

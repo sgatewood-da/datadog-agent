@@ -13,6 +13,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	protocolsUtils "github.com/DataDog/datadog-agent/pkg/network/protocols/testutil"
 	"io"
 	"net"
 	nethttp "net/http"
@@ -136,10 +137,10 @@ const (
 	fetchMinVersion          = 0
 )
 
-func testProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	tests := []struct {
 		name     string
-		testFunc func(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string)
+		testFunc func(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server)
 	}{
 		{
 			name:     "kafka",
@@ -180,12 +181,12 @@ func testProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.testFunc(t, tr, clientHost, targetHost, serverHost)
+			tt.testFunc(t, tr, clientHost, targetHost, serverHost, cachedServers)
 		})
 	}
 }
 
-func testKafkaProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testKafkaProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	const topicName = "franz-kafka"
 	testIndex := 0
 	// Kafka does not allow us to delete topic, but to mark them for deletion, so we have to generate a unique topic
@@ -224,7 +225,15 @@ func testKafkaProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 
 	serverAddress := net.JoinHostPort(serverHost, kafkaPort)
 	targetAddress := net.JoinHostPort(targetHost, kafkaPort)
-	require.NoError(t, kafka.RunServer(t, serverHost, kafkaPort))
+
+	s, ok := cachedServers["kafka"]
+	if ok {
+		require.NoError(t, s.Resume())
+		t.Cleanup(func() { s.Pause() })
+	} else {
+		_, err := mysql.RunServer(t, serverHost, kafkaPort)
+		require.NoError(t, err)
+	}
 
 	tests := []protocolClassificationAttributes{
 		{
@@ -439,7 +448,7 @@ func testKafkaProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 	}
 }
 
-func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	skipFunc := composeSkips(skipIfNotLinux, skipIfUsingNAT)
 	skipFunc(t, testContext{
 		serverAddress: serverHost,
@@ -462,7 +471,15 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 
 	serverAddress := net.JoinHostPort(serverHost, mysqlPort)
 	targetAddress := net.JoinHostPort(targetHost, mysqlPort)
-	require.NoError(t, mysql.RunServer(t, serverHost, mysqlPort))
+
+	s, ok := cachedServers["mysql"]
+	if ok {
+		require.NoError(t, s.Resume())
+		t.Cleanup(func() { s.Pause() })
+	} else {
+		_, err := mysql.RunServer(t, serverHost, mysqlPort)
+		require.NoError(t, err)
+	}
 
 	tests := []protocolClassificationAttributes{
 		{
@@ -752,7 +769,7 @@ func testMySQLProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 	}
 }
 
-func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	skipFunc := composeSkips(skipIfNotLinux, skipIfUsingNAT)
 	skipFunc(t, testContext{
 		serverAddress: serverHost,
@@ -774,7 +791,15 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 	// Setting one instance of postgres server for all tests.
 	serverAddress := net.JoinHostPort(serverHost, postgresPort)
 	targetAddress := net.JoinHostPort(targetHost, postgresPort)
-	require.NoError(t, pgutils.RunServer(t, serverHost, postgresPort))
+
+	s, ok := cachedServers["postgres"]
+	if ok {
+		require.NoError(t, s.Resume())
+		t.Cleanup(func() { s.Pause() })
+	} else {
+		_, err := pgutils.RunServer(t, serverHost, postgresPort)
+		require.NoError(t, err)
+	}
 
 	tests := []protocolClassificationAttributes{
 		{
@@ -960,7 +985,7 @@ func testPostgresProtocolClassification(t *testing.T, tr *Tracer, clientHost, ta
 	}
 }
 
-func testMongoProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testMongoProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	skipFunc := composeSkips(skipIfNotLinux, skipIfUsingNAT)
 	skipFunc(t, testContext{
 		serverAddress: serverHost,
@@ -983,7 +1008,14 @@ func testMongoProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 	// Setting one instance of mongo server for all tests.
 	serverAddress := net.JoinHostPort(serverHost, mongoPort)
 	targetAddress := net.JoinHostPort(targetHost, mongoPort)
-	require.NoError(t, protocolsmongo.RunServer(t, serverHost, mongoPort))
+	s, ok := cachedServers["mongo"]
+	if ok {
+		require.NoError(t, s.Resume())
+		t.Cleanup(func() { s.Pause() })
+	} else {
+		_, err := protocolsmongo.RunServer(t, serverHost, mongoPort)
+		require.NoError(t, err)
+	}
 
 	tests := []protocolClassificationAttributes{
 		{
@@ -1111,7 +1143,7 @@ func testMongoProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 	}
 }
 
-func testRedisProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testRedisProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	skipFunc := composeSkips(skipIfNotLinux, skipIfUsingNAT)
 	skipFunc(t, testContext{
 		serverAddress: serverHost,
@@ -1136,7 +1168,14 @@ func testRedisProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 	// Setting one instance of redis server for all tests.
 	serverAddress := net.JoinHostPort(serverHost, redisPort)
 	targetAddress := net.JoinHostPort(targetHost, redisPort)
-	require.NoError(t, redis.RunServer(t, serverHost, redisPort))
+	s, ok := cachedServers["redis"]
+	if ok {
+		require.NoError(t, s.Resume())
+		t.Cleanup(func() { s.Pause() })
+	} else {
+		_, err := redis.RunServer(t, serverHost, redisPort)
+		require.NoError(t, err)
+	}
 
 	tests := []protocolClassificationAttributes{
 		{
@@ -1266,7 +1305,7 @@ func testRedisProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 	}
 }
 
-func testAMQPProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testAMQPProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	skipFunc := composeSkips(skipIfNotLinux, skipIfUsingNAT)
 	skipFunc(t, testContext{
 		serverAddress: serverHost,
@@ -1290,7 +1329,14 @@ func testAMQPProtocolClassification(t *testing.T, tr *Tracer, clientHost, target
 	// Setting one instance of amqp server for all tests.
 	serverAddress := net.JoinHostPort(serverHost, amqpPort)
 	targetAddress := net.JoinHostPort(targetHost, amqpPort)
-	require.NoError(t, amqp.RunServer(t, serverHost, amqpPort))
+	s, ok := cachedServers["amqp"]
+	if ok {
+		require.NoError(t, s.Resume())
+		t.Cleanup(func() { s.Pause() })
+	} else {
+		_, err := amqp.RunServer(t, serverHost, amqpPort)
+		require.NoError(t, err)
+	}
 
 	tests := []protocolClassificationAttributes{
 		{
@@ -1395,7 +1441,7 @@ func testAMQPProtocolClassification(t *testing.T, tr *Tracer, clientHost, target
 	}
 }
 
-func testHTTPProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testHTTPProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	defaultDialer := &net.Dialer{
 		LocalAddr: &net.TCPAddr{
 			IP: net.ParseIP(clientHost),
@@ -1460,7 +1506,7 @@ func testHTTPProtocolClassification(t *testing.T, tr *Tracer, clientHost, target
 	}
 }
 
-func testHTTP2ProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testHTTP2ProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	skipIfNotLinux(t, testContext{})
 
 	defaultDialer := &net.Dialer{
@@ -1601,7 +1647,7 @@ func testHTTP2ProtocolClassification(t *testing.T, tr *Tracer, clientHost, targe
 	}
 }
 
-func testEdgeCasesProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string) {
+func testEdgeCasesProtocolClassification(t *testing.T, tr *Tracer, clientHost, targetHost, serverHost string, cachedServers map[string]*protocolsUtils.Server) {
 	defaultDialer := &net.Dialer{
 		LocalAddr: &net.TCPAddr{
 			IP: net.ParseIP(clientHost),

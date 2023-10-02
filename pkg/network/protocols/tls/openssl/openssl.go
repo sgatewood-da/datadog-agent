@@ -15,7 +15,7 @@ import (
 )
 
 // RunServerOpenssl launches an openssl server.
-func RunServerOpenssl(t *testing.T, serverPort string, clientCount int, args ...string) error {
+func RunServerOpenssl(t *testing.T, serverPort string, clientCount int, args ...string) (*protocolsUtils.Server, error) {
 	env := []string{
 		"OPENSSL_PORT=" + serverPort,
 		"CLIENTS=" + strconv.Itoa(clientCount),

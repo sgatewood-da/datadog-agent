@@ -19,7 +19,7 @@ const (
 	Pass = "guest"
 )
 
-func RunServer(t testing.TB, serverAddr, serverPort string) error {
+func RunServer(t testing.TB, serverAddr, serverPort string) (*protocolsUtils.Server, error) {
 	env := []string{
 		"AMQP_ADDR=" + serverAddr,
 		"AMQP_PORT=" + serverPort,

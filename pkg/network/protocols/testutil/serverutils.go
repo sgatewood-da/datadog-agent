@@ -8,6 +8,7 @@ package testutil
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"testing"
@@ -20,12 +21,16 @@ const (
 	DefaultTimeout = time.Minute
 )
 
+type Server struct {
+	dockerPath string
+}
+
 // RunDockerServer is a template for running a protocols server in a docker.
 // - serverName is a friendly name of the server we are setting (AMQP, mongo, etc.).
 // - dockerPath is the path for the docker-compose.
 // - env is any environment variable required for running the server.
 // - serverStartRegex is a regex to be matched on the server logs to ensure it started correctly.
-func RunDockerServer(t testing.TB, serverName, dockerPath string, env []string, serverStartRegex *regexp.Regexp, timeout time.Duration) error {
+func RunDockerServer(t testing.TB, serverName, dockerPath string, env []string, serverStartRegex *regexp.Regexp, timeout time.Duration) (*Server, error) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -52,17 +57,34 @@ func RunDockerServer(t testing.TB, serverName, dockerPath string, env []string, 
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil {
 				patternScanner.PrintLogs(t)
-				return fmt.Errorf("failed to start %s pid %d server: %s", serverName, cmd.Process.Pid, err)
+				return nil, fmt.Errorf("failed to start %s pid %d server: %s", serverName, cmd.Process.Pid, err)
 			}
 		case <-patternScanner.DoneChan:
 			t.Logf("%s server pid (docker) %d is ready", serverName, cmd.Process.Pid)
-			return nil
+			return &Server{dockerPath: dockerPath}, nil
 		case <-time.After(timeout):
 			patternScanner.PrintLogs(t)
 			// please don't use t.Fatalf() here as we could test if it failed later
-			return fmt.Errorf("failed to start %s server pid %d: timed out after %s", serverName, cmd.Process.Pid, timeout.String())
+			return nil, fmt.Errorf("failed to start %s server pid %d: timed out after %s", serverName, cmd.Process.Pid, timeout.String())
 		}
 	}
+}
+
+func (s *Server) runCommand(command string) error {
+	timedCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(timedCtx, "docker-compose", "-f", s.dockerPath, command)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stdout
+	return cmd.Run()
+}
+
+func (s *Server) Pause() error {
+	return s.runCommand("pause")
+}
+
+func (s *Server) Resume() error {
+	return s.runCommand("unpause")
 }
 
 // RunHostServer is a template for running a command on the Host.

@@ -20,7 +20,7 @@ const (
 	Pass = "root"
 )
 
-func RunServer(t testing.TB, serverAddr, serverPort string) error {
+func RunServer(t testing.TB, serverAddr, serverPort string) (*protocolsUtils.Server, error) {
 	env := []string{
 		"MYSQL_ADDR=" + serverAddr,
 		"MYSQL_PORT=" + serverPort,
