@@ -227,6 +227,7 @@ func (c *CWSConsumer) Stop() {
 
 // HandleCustomEvent is called by the probe when an event should be sent to Datadog but doesn't need evaluation
 func (c *CWSConsumer) HandleCustomEvent(rule *rules.Rule, event *events.CustomEvent) {
+	fmt.Printf("SEND: %v\n", event)
 	c.eventSender.SendEvent(rule, event, nil, "")
 }
 

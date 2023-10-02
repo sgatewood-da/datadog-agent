@@ -283,6 +283,8 @@ func (at *ActivityTree) Contains(event *model.Event, generationType NodeGenerati
 
 // insert inserts the event in the activity tree, returns true if the event generated a new entry in the tree
 func (at *ActivityTree) insertEvent(event *model.Event, dryRun bool, generationType NodeGenerationType, resolvers *resolvers.Resolvers) (bool, error) {
+	k := event.ProcessContext.FileEvent.BasenameStr == "gunzip"
+
 	// sanity check
 	if generationType == Unknown || generationType > MaxNodeGenerationType {
 		return false, fmt.Errorf("invalid generation type: %v", generationType)
@@ -290,13 +292,25 @@ func (at *ActivityTree) insertEvent(event *model.Event, dryRun bool, generationT
 
 	// check if this event type is traced
 	if valid, err := at.isEventValid(event, dryRun); !valid || err != nil {
+		if k {
+			fmt.Printf("isEventValid: %v\n", err)
+		}
+
 		return false, fmt.Errorf("invalid event: %s", err)
 	}
 
 	node, newProcessNode, err := at.CreateProcessNode(event.ProcessCacheEntry, generationType, dryRun, resolvers)
 	if err != nil {
+		if k {
+			fmt.Printf("KO CreateProcessNode: %v\n", err)
+		}
 		return false, err
 	}
+
+	if k {
+		fmt.Printf("CreateProcessNode: %v %v %v (%v)\n", node, newProcessNode, err, dryRun)
+	}
+
 	if newProcessNode && dryRun {
 		return true, nil
 	}
@@ -310,6 +324,10 @@ func (at *ActivityTree) insertEvent(event *model.Event, dryRun bool, generationT
 
 	// ignore events with an error
 	if event.Error != nil {
+		if k {
+			fmt.Printf("Event Error: %v\n", event.Error)
+		}
+
 		at.Stats.droppedCount[event.GetEventType()][brokenEventReason].Inc()
 		return false, event.Error
 	}
@@ -323,6 +341,10 @@ func (at *ActivityTree) insertEvent(event *model.Event, dryRun bool, generationT
 	case model.ExecEventType:
 		// tag the matched rules if any
 		node.MatchedRules = model.AppendMatchedRule(node.MatchedRules, event.Rules)
+		if k {
+			fmt.Printf("Event Exec: %v\n", event.Error)
+		}
+
 		return newProcessNode, nil
 	case model.FileOpenEventType:
 		return node.InsertFileEvent(&event.Open.File, event, generationType, at.Stats, dryRun, at.pathsReducer, resolvers), nil

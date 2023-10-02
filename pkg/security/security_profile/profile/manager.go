@@ -657,6 +657,9 @@ func (m *SecurityProfileManager) unlinkProfile(profile *SecurityProfile, workloa
 func (m *SecurityProfileManager) LookupEventInProfiles(event *model.Event) {
 	// ignore events with an error
 	if event.Error != nil {
+		if event.ProcessContext.FileEvent.BasenameStr == "gunzip" {
+			fmt.Printf("LookupEventInProfiles error: %v\n", event.Error)
+		}
 		return
 	}
 
@@ -706,6 +709,10 @@ func (m *SecurityProfileManager) LookupEventInProfiles(event *model.Event) {
 			m.incrementEventFilteringStat(event.GetEventType(), NoProfile, NA)
 			return
 		}
+		if event.ProcessContext.FileEvent.BasenameStr == "gunzip" {
+			fmt.Printf("Found: %v\n", event.Error)
+		}
+
 		FillProfileContextFromProfile(&event.SecurityProfileContext, profile)
 		if found {
 			event.AddToFlags(model.EventFlagsSecurityProfileInProfile)

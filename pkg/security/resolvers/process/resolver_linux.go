@@ -498,6 +498,10 @@ func (p *Resolver) insertForkEntry(entry *model.ProcessCacheEntry, inode uint64,
 		prev.Exit(entry.ForkTime)
 	}
 
+	if inode == 0 {
+		fmt.Printf("ZERO: %+v\n", entry)
+	}
+
 	if entry.Pid != 1 {
 		parent := p.entryCache[entry.PPid]
 		if entry.PPid >= 1 && (parent == nil || parent.FileEvent.Inode != inode) {
@@ -522,6 +526,10 @@ func (p *Resolver) insertForkEntry(entry *model.ProcessCacheEntry, inode uint64,
 func (p *Resolver) insertExecEntry(entry *model.ProcessCacheEntry, inode uint64, source uint64) {
 	prev := p.entryCache[entry.Pid]
 	if prev != nil {
+		if inode == 0 {
+			fmt.Printf("ZERO: %+v\n", entry)
+		}
+
 		if prev.FileEvent.Inode != inode {
 			entry.IsParentMissing = true
 			p.inodeErrStats.Inc()

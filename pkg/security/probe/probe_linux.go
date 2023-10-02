@@ -377,6 +377,10 @@ func (p *Probe) DispatchEvent(event *model.Event) {
 		p.profileManagers.securityProfileManager.LookupEventInProfiles(event)
 	}
 
+	if event.ProcessContext.FileEvent.BasenameStr == "gunzip" {
+		fmt.Printf("Event A: %v\n", event.IsAnomalyDetectionEvent())
+	}
+
 	// send event to wildcard handlers, like the CWS rule engine, first
 	p.sendEventToWildcardHandlers(event)
 
