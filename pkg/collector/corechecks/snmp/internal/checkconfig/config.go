@@ -493,6 +493,7 @@ func NewCheckConfig(rawInstance integration.Data, rawInitConfig integration.Data
 	// TODO: Move profiles select logic to a separate function
 	// Profile Configs
 	zipFilePath := getZipFilePath()
+	log.Debugf("zipFilePath: %s", zipFilePath)
 	zipFileExist := false
 	if _, err := os.Stat(zipFilePath); !errors.Is(err, os.ErrNotExist) {
 		zipFileExist = true
@@ -524,6 +525,8 @@ func NewCheckConfig(rawInstance integration.Data, rawInitConfig integration.Data
 		profiledefinition.NormalizeMetrics(profileDef.Definition.Metrics)
 	}
 	c.Profiles = profiles
+
+	log.Warnf("available profiles: %#v", profiles)
 
 	// profile configs
 	profile := instance.Profile
