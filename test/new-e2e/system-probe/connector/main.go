@@ -1,3 +1,9 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2016-present Datadog, Inc.
+
+// Package main implements the SSH connector between gitlab runners, metal instances, and micro VMs
 package main
 
 import (
@@ -18,15 +24,15 @@ import (
 )
 
 const (
-	FailConfig  = "config_fail"
-	FailConnect = "connect_fail"
-	FailStart   = "start_fail"
-	FailWait    = "wait_fail"
-	Success     = "success"
-	Fail        = "fail"
+	failConfig  = "config_fail"
+	failConnect = "connect_fail"
+	failStart   = "start_fail"
+	failWait    = "wait_fail"
+	success     = "success"
+	fail        = "fail"
 )
 
-type Args struct {
+type args struct {
 	host                    string
 	user                    string
 	port                    int
@@ -36,7 +42,7 @@ type Args struct {
 	vmCommand               string
 }
 
-func readArgs() *Args {
+func readArgs() *args {
 	userPtr := flag.String("user", "", "SSH user")
 	hostPtr := flag.String("host", "", "Host ip to connect to")
 	portPtr := flag.Int("port", 22, "Port for ssh server")
@@ -47,7 +53,7 @@ func readArgs() *Args {
 
 	flag.Parse()
 
-	return &Args{
+	return &args{
 		host:                    *hostPtr,
 		user:                    *userPtr,
 		port:                    *portPtr,
@@ -58,26 +64,26 @@ func readArgs() *Args {
 	}
 }
 
-type ConnectorInfo struct {
+type connectorInfo struct {
 	// For gitlab runner this will be the job id
 	// For metal instance this will be empty
 	connectorHost string
 	connectorType string
 }
 
-func getConnectorInfo() (ConnectorInfo, error) {
+func getConnectorInfo() (connectorInfo, error) {
 	connectorType := "metal_to_vm"
 	if _, ok := os.LookupEnv("GITLAB_CI"); ok {
 		connectorType = "gitlab_to_metal"
 	}
 
-	return ConnectorInfo{
+	return connectorInfo{
 		connectorHost: os.Getenv("CI_JOB_ID"),
 		connectorType: connectorType,
 	}, nil
 }
 
-func sshCommunicator(args *Args, sshKey []byte) (*sshtools.Communicator, error) {
+func sshCommunicator(args *args, sshKey []byte) (*sshtools.Communicator, error) {
 	config := sshtools.Config{
 		Port:                args.port,
 		ServerAliveInterval: args.serverKeepAliveInterval,
@@ -111,7 +117,7 @@ func run() (err error) {
 	}
 
 	var failType string
-	result := Fail
+	result := fail
 	defer func() {
 		if serr := submitExecutionMetric(cinfo, failType, result); serr != nil {
 			err = serr
@@ -120,13 +126,13 @@ func run() (err error) {
 
 	communicator, err := sshCommunicator(args, key)
 	if err != nil {
-		failType = FailConfig
+		failType = failConfig
 		return fmt.Errorf("communicator: %s", err)
 	}
 
 	ctx := context.Background()
 	if err := communicator.Connect(ctx); err != nil {
-		failType = FailConnect
+		failType = failConnect
 		return fmt.Errorf("connect: %s", err)
 	}
 
@@ -138,20 +144,20 @@ func run() (err error) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := communicator.Start(ctx, &cmd); err != nil {
-		failType = FailStart
+		failType = failStart
 		return fmt.Errorf("communicator start: %s", err)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		failType = FailWait
+		failType = failWait
 		return fmt.Errorf("wait: %s", err)
 	}
 
-	result = Success
+	result = success
 	return nil
 }
 
-func buildMetric(cinfo ConnectorInfo, failType, result string) datadogV2.MetricPayload {
+func buildMetric(cinfo connectorInfo, failType, result string) datadogV2.MetricPayload {
 	tags := []string{
 		fmt.Sprintf("result:%s", result),
 		fmt.Sprintf("connection_type:%s", cinfo.connectorType),
@@ -176,7 +182,7 @@ func buildMetric(cinfo ConnectorInfo, failType, result string) datadogV2.MetricP
 	}
 }
 
-func submitExecutionMetric(cinfo ConnectorInfo, failType, result string) error {
+func submitExecutionMetric(cinfo connectorInfo, failType, result string) error {
 	if _, ok := os.LookupEnv("DD_API_KEY"); !ok {
 		fmt.Fprintf(os.Stderr, "skipping sending metric because DD_API_KEY not present")
 		return nil
@@ -192,7 +198,7 @@ func submitExecutionMetric(cinfo ConnectorInfo, failType, result string) error {
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-		return fmt.Errorf("error when calling `MetricsApi.SubmitMetrics`: %v\n", err)
+		return fmt.Errorf("error when calling `MetricsApi.SubmitMetrics`: %v", err)
 	}
 
 	responseContent, _ := json.MarshalIndent(resp, "", "  ")

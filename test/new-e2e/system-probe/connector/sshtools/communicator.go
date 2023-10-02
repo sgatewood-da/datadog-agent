@@ -44,6 +44,7 @@ type Communicator struct {
 	keepaliveDone chan struct{}
 }
 
+// NewCommunicator creates a *sshtools.Communicator
 func NewCommunicator(host string, config Config, dial DialContextFunc, logger Logger) *Communicator {
 	return &Communicator{
 		host:   host,

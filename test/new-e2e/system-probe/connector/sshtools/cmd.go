@@ -1,5 +1,6 @@
 // Copyright (C) 2017 ScyllaDB
 
+// Package sshtools allows execution of SSH commands easily
 package sshtools
 
 import (
