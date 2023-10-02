@@ -15,6 +15,10 @@ type Cmd struct {
 	// necessary.
 	Command string
 
+	// Env specifies the environment of the process.
+	// Each entry is of the form "key=value".
+	Env []string
+
 	// Stdin specifies the process's standard input. If Stdin is nil,
 	// the process reads from an empty bytes.Buffer.
 	Stdin io.Reader

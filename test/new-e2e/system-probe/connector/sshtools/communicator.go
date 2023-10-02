@@ -137,6 +137,14 @@ func (c *Communicator) Start(ctx context.Context, cmd *Cmd) error {
 		}
 	}
 
+	for _, kv := range cmd.Env {
+		if key, val, ok := strings.Cut(kv, "="); ok {
+			if err := session.Setenv(key, val); err != nil {
+				return fmt.Errorf("set env `%s`: %w", key, err)
+			}
+		}
+	}
+
 	c.logger.Println("Starting remote command",
 		"host", c.host,
 		"cmd", cmd.Command,

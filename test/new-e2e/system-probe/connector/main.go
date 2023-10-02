@@ -139,6 +139,10 @@ func run() (err error) {
 		return fmt.Errorf("connect: %s", err)
 	}
 
+	if val := os.Getenv("DD_API_KEY"); val != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("DD_API_KEY=%s", val))
+	}
+
 	cmd.Command = args.vmCommand
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
