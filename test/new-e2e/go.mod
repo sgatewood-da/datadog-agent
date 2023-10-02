@@ -41,7 +41,6 @@ require (
 	github.com/docker/docker v24.0.4+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/pkg/sftp v1.13.6
-	github.com/scylladb/go-sshtools v1.0.0
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
 	k8s.io/client-go v0.27.3
@@ -167,7 +166,6 @@ require (
 	github.com/zclconf/go-cty v1.13.2 // indirect
 	github.com/zorkian/go-datadog-api v2.30.0+incompatible // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	go.uber.org/multierr v1.1.0 // indirect
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.12.0 // indirect

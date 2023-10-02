@@ -12,8 +12,9 @@ import (
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadog"
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV2"
-	"github.com/scylladb/go-sshtools"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/DataDog/datadog-agent/test/new-e2e/system-probe/connector/sshtools"
 )
 
 const (
