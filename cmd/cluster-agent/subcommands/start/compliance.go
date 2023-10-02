@@ -82,6 +82,7 @@ func startCompliance(senderManager sender.SenderManager, stopper startstop.Stopp
 	runPath := coreconfig.Datadog.GetString("compliance_config.run_path")
 	configDir := coreconfig.Datadog.GetString("compliance_config.dir")
 	checkInterval := coreconfig.Datadog.GetDuration("compliance_config.check_interval")
+	checkIntervalLowPriority := coreconfig.Datadog.GetDuration("compliance_config.check_interval_low_priority")
 
 	reporter, err := compliance.NewLogReporter(stopper, "compliance-agent", "compliance", runPath, endpoints, ctx)
 	if err != nil {
@@ -97,9 +98,10 @@ func startCompliance(senderManager sender.SenderManager, stopper startstop.Stopp
 	}
 
 	agent := compliance.NewAgent(senderManager, compliance.AgentOptions{
-		ConfigDir:     configDir,
-		Reporter:      reporter,
-		CheckInterval: checkInterval,
+		ConfigDir:                configDir,
+		Reporter:                 reporter,
+		CheckInterval:            checkInterval,
+		CheckIntervalLowPriority: checkIntervalLowPriority,
 		RuleFilter: func(rule *compliance.Rule) bool {
 			return rule.HasScope(compliance.KubernetesClusterScope)
 		},

@@ -30,6 +30,7 @@ func StartCompliance(log log.Component, config config.Component, sysprobeconfig 
 	configDir := config.GetString("compliance_config.dir")
 	metricsEnabled := config.GetBool("compliance_config.metrics.enabled")
 	checkInterval := config.GetDuration("compliance_config.check_interval")
+	checkIntervalLowPriority := config.GetDuration("compliance_config.check_interval_low_priority")
 
 	if !enabled {
 		return nil, nil
@@ -61,10 +62,11 @@ func StartCompliance(log log.Component, config config.Component, sysprobeconfig 
 	runner := runner.NewRunner(senderManager)
 	stopper.Add(runner)
 	agent := compliance.NewAgent(senderManager, compliance.AgentOptions{
-		ResolverOptions: resolverOptions,
-		ConfigDir:       configDir,
-		Reporter:        reporter,
-		CheckInterval:   checkInterval,
+		ResolverOptions:          resolverOptions,
+		ConfigDir:                configDir,
+		Reporter:                 reporter,
+		CheckInterval:            checkInterval,
+		CheckIntervalLowPriority: checkIntervalLowPriority,
 	})
 	err = agent.Start()
 	if err != nil {
