@@ -7,6 +7,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/networkdevice/profile/profiledefinition"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"io"
+	"path/filepath"
 )
 
 func loadZipProfiles() (profileConfigMap, error) {
@@ -57,5 +58,5 @@ func loadZipProfiles() (profileConfigMap, error) {
 }
 
 func getZipFilePath() string {
-	return getProfileConfdRoot(profilesZipFile)
+	return getProfileConfdRoot(filepath.Join(userProfilesFolder, profilesZipFile))
 }
