@@ -14,6 +14,9 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/config"
 )
 
+// ConfigReader is a subset of Config that only allows reading of configuration
+type ConfigReader = config.ConfigReader //nolint:revive
+
 // cfg implements the Component.
 type cfg struct {
 	// this component is currently implementing a thin wrapper around pkg/config,

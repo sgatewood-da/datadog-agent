@@ -74,6 +74,7 @@ func StartAgentWithDefaults(ctxChan <-chan context.Context) (<-chan error, error
 			metadataRunner runner.Component,
 			sharedSerializer serializer.MetricSerializer,
 			otelcollector otelcollector.Component,
+			hostMetadata host.Component,
 			_ netflowServer.Component,
 			_ agentcrashdetect.Component,
 			_ comptraceconfig.Component,
@@ -81,7 +82,7 @@ func StartAgentWithDefaults(ctxChan <-chan context.Context) (<-chan error, error
 
 			defer StopAgentWithDefaults(server)
 
-			err := startAgent(&cliParams{GlobalParams: &command.GlobalParams{}}, log, flare, telemetry, sysprobeconfig, server, capture, serverDebug, rcclient, logsAgent, forwarder, sharedSerializer, otelcollector)
+			err := startAgent(&cliParams{GlobalParams: &command.GlobalParams{}}, log, flare, telemetry, sysprobeconfig, server, capture, serverDebug, rcclient, logsAgent, forwarder, sharedSerializer, otelcollector, hostMetadata)
 			if err != nil {
 				return err
 			}
