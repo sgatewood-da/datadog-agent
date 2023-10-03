@@ -162,6 +162,7 @@ func (w *PodWatcher) Expire() ([]string, error) {
 	for id, lastSeen := range w.lastSeen {
 		// pod was removed from the pod list, we can safely cleanup everything
 		if now.Sub(lastSeen) > w.expiryDuration {
+			log.Debugf("Item was removed from pod list: %s", id)
 			delete(w.lastSeen, id)
 			delete(w.lastSeenReady, id)
 			delete(w.tagsDigest, id)
@@ -173,6 +174,7 @@ func (w *PodWatcher) Expire() ([]string, error) {
 	for id, lastSeenReady := range w.lastSeenReady {
 		// we keep pods gone unready for 25 seconds and then force removal
 		if now.Sub(lastSeenReady) > unreadinessTimeout {
+			log.Debugf("Item has been unready for a while, removing: %s", id)
 			delete(w.lastSeenReady, id)
 			expiredContainers = append(expiredContainers, id)
 		}

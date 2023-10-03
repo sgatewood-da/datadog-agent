@@ -115,6 +115,7 @@ func (c *WorkloadMetaCollector) processEvents(evBundle workloadmeta.EventBundle)
 
 		switch ev.Type {
 		case workloadmeta.EventTypeSet:
+			log.Debugf("in processEvent for type set for entity %s", entityID)
 			taggerEntityID := buildTaggerEntityID(entityID)
 
 			// keep track of children of this entity from previous
@@ -157,6 +158,7 @@ func (c *WorkloadMetaCollector) processEvents(evBundle workloadmeta.EventBundle)
 			tagInfos = append(tagInfos, c.handleDeleteChildren(source, unseen)...)
 
 		case workloadmeta.EventTypeUnset:
+			log.Debugf("in processEvent for type unset for entity %s", entityID)
 			tagInfos = append(tagInfos, c.handleDelete(ev)...)
 
 		default:
@@ -577,6 +579,8 @@ func (c *WorkloadMetaCollector) extractTagsFromPodContainer(pod *workloadmeta.Ku
 
 	if container.Name != "" && pod.Name != "" {
 		tags.AddHigh("display_container_name", fmt.Sprintf("%s_%s", container.Name, pod.Name))
+	} else {
+		log.Debugf("container.Name or pod.Name is empty for container: %+v, pod:%+v", container, pod)
 	}
 
 	image := podContainer.Image
@@ -630,6 +634,7 @@ func (c *WorkloadMetaCollector) registerChild(parent, child workloadmeta.EntityI
 func (c *WorkloadMetaCollector) handleDelete(ev workloadmeta.Event) []*TagInfo {
 	entityID := ev.Entity.GetID()
 	taggerEntityID := buildTaggerEntityID(entityID)
+	log.Debugf("in handleDelete for entity %s", entityID)
 
 	children := c.children[taggerEntityID]
 
@@ -651,6 +656,7 @@ func (c *WorkloadMetaCollector) handleDeleteChildren(source string, children map
 	tagInfos := make([]*TagInfo, 0, len(children))
 
 	for childEntityID := range children {
+		log.Debugf("deleting child %s for source %s", childEntityID, source)
 		t := TagInfo{
 			Source:       source,
 			Entity:       childEntityID,

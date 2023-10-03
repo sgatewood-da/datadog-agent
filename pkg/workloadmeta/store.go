@@ -609,6 +609,7 @@ func (s *store) handleEvents(evs []CollectorEvent) {
 
 		switch ev.Type {
 		case EventTypeSet:
+			log.Debugf("in handleEvents for type set for entity %s", entityID)
 			if !ok {
 				entitiesOfKind[entityID.ID] = newCachedEntity()
 				cachedEntity = entitiesOfKind[entityID.ID]
@@ -624,6 +625,7 @@ func (s *store) handleEvents(evs []CollectorEvent) {
 			}
 
 			if !changed {
+				log.Debugf("no changes detected for entity %s, continuing", entityID)
 				continue
 			}
 		case EventTypeUnset:
@@ -633,6 +635,7 @@ func (s *store) handleEvents(evs []CollectorEvent) {
 			// fixes an issue where collectors emit
 			// EventTypeUnset events for pause containers
 			// they never emitted a EventTypeSet for.
+			log.Debugf("in handleEvents for type unset for entity %s", entityID)
 
 			if !ok {
 				continue
@@ -642,6 +645,7 @@ func (s *store) handleEvents(evs []CollectorEvent) {
 			if !sourceOk {
 				continue
 			}
+			log.Debugf("handleEvents wasn't filtered for entity %s", entityID)
 
 			// keep a copy of cachedEntity before removing sources,
 			// as we may need to merge it later
@@ -656,6 +660,7 @@ func (s *store) handleEvents(evs []CollectorEvent) {
 			)
 
 			if len(c.sources) == 0 {
+				log.Debugf("no more sources for entity %s", entityID)
 				delete(entitiesOfKind, entityID.ID)
 			}
 		default:

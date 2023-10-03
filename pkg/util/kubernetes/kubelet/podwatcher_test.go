@@ -205,6 +205,7 @@ func (suite *PodwatcherTestSuite) TestPodWatcherReadinessChange() {
 	require.Len(suite.T(), expire, 0)
 
 	testContainerID := "docker://84adac90973fa1263ccf1e296cec72acb4128b6e19fd25bffe4fafb059adafc0"
+	otherContainerID := "docker://84adac90973fa1263ccf1e296cec72acb4128b6e19fd25bffe4fafb059adafc1"
 
 	// simulate unreadiness for 10 sec
 	watcher.lastSeenReady[testContainerID] = watcher.lastSeenReady[testContainerID].Add(-10 * time.Second)
@@ -214,7 +215,7 @@ func (suite *PodwatcherTestSuite) TestPodWatcherReadinessChange() {
 	changes, err = watcher.computeChanges(sourcePods)
 	require.Nil(suite.T(), err)
 	require.Len(suite.T(), changes, 0)
-	require.Len(suite.T(), watcher.lastSeenReady, 5)
+	require.Len(suite.T(), watcher.lastSeenReady, 6)
 	expire, err = watcher.Expire()
 	require.Nil(suite.T(), err)
 	require.Len(suite.T(), expire, 0)
@@ -233,13 +234,14 @@ func (suite *PodwatcherTestSuite) TestPodWatcherReadinessChange() {
 	// simulate unreadiness for 45 sec
 	// service should be removed
 	watcher.lastSeenReady[testContainerID] = watcher.lastSeenReady[testContainerID].Add(-45 * time.Second)
+	watcher.lastSeenReady[otherContainerID] = watcher.lastSeenReady[testContainerID].Add(-45 * time.Second)
 	sourcePods, err = loadPodsFixture("./testdata/podlist_container_not_ready.json")
 	require.Nil(suite.T(), err)
 	require.Len(suite.T(), sourcePods, 5)
 	changes, err = watcher.computeChanges(sourcePods)
 	require.Nil(suite.T(), err)
 	require.Len(suite.T(), changes, 1)
-	require.Len(suite.T(), watcher.lastSeenReady, 5)
+	require.Len(suite.T(), watcher.lastSeenReady, 6)
 	expire, err = watcher.Expire()
 	require.Nil(suite.T(), err)
 	require.Len(suite.T(), expire, 1)

@@ -85,6 +85,47 @@
                         "terminationMessagePath": "/dev/termination-log",
                         "terminationMessagePolicy": "File",
                         "imagePullPolicy": "Always"
+                    },
+                    {
+                        "name": "other-unready",
+                        "image": "redis",
+                        "ports": [
+                            {
+                                "name": "redis",
+                                "containerPort": 6379,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "resources": {
+                            "limits": {
+                                "cpu": "100m",
+                                "memory": "128Mi"
+                            },
+                            "requests": {
+                                "cpu": "50m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "name": "default-token-rct6f",
+                                "readOnly": true,
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "tcpSocket": {
+                                "port": 6379
+                            },
+                            "initialDelaySeconds": 60,
+                            "timeoutSeconds": 1,
+                            "periodSeconds": 1,
+                            "successThreshold": 1,
+                            "failureThreshold": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "imagePullPolicy": "Always"
                     }
                 ],
                 "restartPolicy": "Always",
@@ -132,11 +173,25 @@
                             }
                         },
                         "lastState": {},
-                        "ready": false,
+                        "ready": true,
                         "restartCount": 0,
                         "image": "redis:latest",
                         "imageID": "docker-pullable://redis@sha256:e549a30b3c31e6305b973e0d9113a3d38d60566708137af9ed7cbdce5650c5cc",
                         "containerID": "docker://84adac90973fa1263ccf1e296cec72acb4128b6e19fd25bffe4fafb059adafc0"
+                    },
+                    {
+                        "name": "other-unready",
+                        "state": {
+                            "running": {
+                                "startedAt": "2019-06-03T14:05:58Z"
+                            }
+                        },
+                        "lastState": {},
+                        "ready": false,
+                        "restartCount": 0,
+                        "image": "redis:latest",
+                        "imageID": "docker-pullable://redis@sha256:e549a30b3c31e6305b973e0d9113a3d38d60566708137af9ed7cbdce5650c5cd",
+                        "containerID": "docker://84adac90973fa1263ccf1e296cec72acb4128b6e19fd25bffe4fafb059adafc1"
                     }
                 ],
                 "qosClass": "Burstable"
