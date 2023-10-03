@@ -1637,6 +1637,7 @@ def start_microvms(
     stack_name="kernel-matrix-testing-system",
     vmconfig=None,
     local=False,
+    provision=False,
 ):
     args = [
         f"--instance-type-x86 {instance_type_x86}" if instance_type_x86 else "",
@@ -1651,6 +1652,7 @@ def start_microvms(
         f"--dependencies-dir {dependencies_dir}" if dependencies_dir else "",
         f"--name {stack_name}",
         f"--vmconfig {vmconfig}" if vmconfig else "",
+        f"--run-provision" if provision else "",
         "--local" if local else "",
     ]
 
