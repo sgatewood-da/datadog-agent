@@ -69,6 +69,9 @@ __maybe_unused static __always_inline void delete_protocol_stack(conn_tuple_t* n
         // alone *before* the `tcp_close` probe is activated. In a host with a
         // network-heavy workload this could easily result in thousands of
         // leaked entries.
+        if (normalized_tuple->sport == 8081 || normalized_tuple->dport == 8081) {
+            log_debug("debug guy hey %d %d", normalized_tuple->sport, normalized_tuple->dport);
+        }
         goto deletion;
     }
 
@@ -87,7 +90,7 @@ __maybe_unused static __always_inline void delete_protocol_stack(conn_tuple_t* n
     // eventually evict the leaked entry if it ever reaches capacity.
     //
     // Note that we could instead have a reference count field and increment it
-    // attomically using the __sync_fetch_and_add builtin, which produces a
+    // atomically using the __sync_fetch_and_add builtin, which produces a
     // BPF_ATOMIC_ADD instruction. The problem is that this instruction requires
     // a 64-bit operand that would increase the size of of `protocol_stack_t` by
     // 3x. Since each `connection_tuple_t` embeds a `protocol_stack_t` that will
@@ -100,6 +103,9 @@ __maybe_unused static __always_inline void delete_protocol_stack(conn_tuple_t* n
     if (!(stack->flags&FLAG_TCP_CLOSE_DELETION) ||
         !(stack->flags&FLAG_SOCKET_FILTER_DELETION)) {
         return;
+    }
+    if (normalized_tuple->sport == 8081 || normalized_tuple->dport == 8081) {
+        log_debug("debug guy2 hey %d %d %d", normalized_tuple->sport, normalized_tuple->dport, stack->flags);
     }
  deletion:
     bpf_map_delete_elem(&connection_protocol, normalized_tuple);

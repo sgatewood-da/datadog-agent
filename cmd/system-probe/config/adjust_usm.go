@@ -18,7 +18,7 @@ const (
 
 func adjustUSM(cfg config.Config) {
 	if cfg.GetBool(smNS("enabled")) {
-		applyDefault(cfg, netNS("enable_http_monitoring"), true)
+		applyDefault(cfg, smNS("enable_http_monitoring"), true)
 		applyDefault(cfg, netNS("enable_https_monitoring"), true)
 		applyDefault(cfg, spNS("enable_runtime_compiler"), true)
 		applyDefault(cfg, spNS("enable_kernel_header_download"), true)

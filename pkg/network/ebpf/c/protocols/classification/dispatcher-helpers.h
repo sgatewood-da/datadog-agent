@@ -96,28 +96,47 @@ static __always_inline void protocol_dispatcher_entrypoint(struct __sk_buff *skb
         return;
     }
 
+    bool relevant_ports = skb_tup.dport == 8081 || skb_tup.sport == 8081;
     bool tcp_termination = is_tcp_termination(&skb_info);
+    if (tcp_termination && relevant_ports) {
+        log_debug("found termination %d %d for %p",skb_tup.sport, skb_tup.dport, skb);
+    }
     // We don't process non tcp packets, nor empty tcp packets which are not tcp termination packets.
     if (!is_tcp(&skb_tup) || (is_payload_empty(&skb_info) && !tcp_termination)) {
+        if (tcp_termination && relevant_ports) {
+            log_debug("abort1 %d %d for %p",skb_tup.sport, skb_tup.dport, skb);
+        }
         return;
     }
 
     // Making sure we've not processed the same tcp segment, which can happen when a single packet travels different
     // interfaces.
     if (has_sequence_seen_before(&skb_tup, &skb_info)) {
+        if (tcp_termination && relevant_ports) {
+            log_debug("seen %d %d for %p",skb_tup.sport, skb_tup.dport, skb);
+        }
         return;
     }
 
     if (tcp_termination) {
+        if (relevant_ports) {
+            log_debug("deleting %d %d for %p",skb_tup.sport, skb_tup.dport, skb);
+        }
         bpf_map_delete_elem(&connection_states, &skb_tup);
     }
 
     protocol_stack_t *stack = get_protocol_stack(&skb_tup);
     if (!stack) {
+        if (tcp_termination && relevant_ports) {
+            log_debug("not stack %d %d for %p",skb_tup.sport, skb_tup.dport, skb);
+        }
         // should never happen, but it is required by the eBPF verifier
         return;
     }
 
+    if (tcp_termination && relevant_ports) {
+        log_debug("here %d %d for %p",skb_tup.sport, skb_tup.dport, skb);
+    }
     // This is used to signal the tracer program that this protocol stack
     // is also shared with our USM program for the purposes of deletion.
     // For more context refer to the comments in `delete_protocol_stack`
@@ -127,6 +146,9 @@ static __always_inline void protocol_dispatcher_entrypoint(struct __sk_buff *skb
 
     protocol_t cur_fragment_protocol = get_protocol_from_stack(stack, LAYER_APPLICATION);
     if (tcp_termination) {
+        if (relevant_ports) {
+            log_debug("current protocol %d %d %d", cur_fragment_protocol,skb_tup.sport, skb_tup.dport);
+        }
         dispatcher_delete_protocol_stack(&skb_tup, stack);
     }
 
@@ -160,7 +182,7 @@ static __always_inline void protocol_dispatcher_entrypoint(struct __sk_buff *skb
         bpf_memcpy(&args->tup, &skb_tup, sizeof(conn_tuple_t));
         bpf_memcpy(&args->skb_info, &skb_info, sizeof(skb_info_t));
 
-        log_debug("dispatching to protocol number: %d\n", cur_fragment_protocol);
+        log_debug("dispatching to protocol number: %d; %d %d\n", cur_fragment_protocol, skb_tup.sport, skb_tup.dport);
         bpf_tail_call_compat(skb, &protocols_progs, protocol_to_program(cur_fragment_protocol));
     }
 }

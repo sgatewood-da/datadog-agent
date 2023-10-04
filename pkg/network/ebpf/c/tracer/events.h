@@ -22,6 +22,9 @@ static __always_inline void clean_protocol_classification(conn_tuple_t *tup) {
     conn_tuple.pid = 0;
     conn_tuple.netns = 0;
     normalize_tuple(&conn_tuple);
+    if (tup->sport == 8081 || tup->dport == 8081) {
+        log_debug("gotls deleting protocol classification NPM %d %d", tup->sport, tup->dport);
+    }
     delete_protocol_stack(&conn_tuple, NULL, FLAG_TCP_CLOSE_DELETION);
 
     conn_tuple_t *skb_tup_ptr = bpf_map_lookup_elem(&conn_tuple_to_socket_skb_conn_tuple, &conn_tuple);

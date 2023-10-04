@@ -12,6 +12,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"math/rand"
 	"net"
@@ -869,13 +870,14 @@ func testHTTPGoTLSCaptureNewProcess(t *testing.T, cfg *config.Config) {
 
 	cfg.EnableGoTLSSupport = true
 	cfg.EnableHTTPMonitoring = true
+	cfg.EnableHTTPStatsByStatusCode = true
 
 	tr := setupTracer(t, cfg)
 
 	// This maps will keep track of whether the tracer saw this request already or not
 	reqs := make(requestsMap)
 	for i := 0; i < expectedOccurrences; i++ {
-		req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("https://%s/%d/request-%d", serverAddr, nethttp.StatusOK, i), nil)
+		req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("https://%s/%d/request-%d", serverAddr, nethttp.StatusOK+i, i), nil)
 		require.NoError(t, err)
 		reqs[req] = false
 	}
@@ -893,6 +895,12 @@ func testHTTPGoTLSCaptureNewProcess(t *testing.T, cfg *config.Config) {
 	}, time.Second*5, time.Millisecond*100, "process %v is not traced by gotls", command.Process.Pid)
 	runRequests()
 	checkRequests(t, tr, expectedOccurrences, reqs)
+	if t.Failed() {
+		s, err := tr.usmMonitor.DumpMaps("http_in_flight")
+		if err == nil {
+			t.Logf(s)
+		}
+	}
 }
 
 func testHTTPGoTLSCaptureAlreadyRunning(t *testing.T, cfg *config.Config) {
@@ -1094,8 +1102,11 @@ func checkRequests(t *testing.T, tr *Tracer, expectedOccurrences int, reqs reque
 	t.Helper()
 
 	occurrences := PrintableInt(0)
-	require.Eventually(t, func() bool {
+	assert.Eventually(t, func() bool {
 		stats := getConnections(t, tr)
+		for k := range stats.HTTP {
+			t.Logf("found %v", k.Path.Content.Get())
+		}
 		occurrences += PrintableInt(countRequestsOccurrences(t, stats, reqs))
 		return int(occurrences) == expectedOccurrences
 	}, 3*time.Second, 100*time.Millisecond, "Expected to find the request %v times, got %v captured. Requests not found:\n%v", expectedOccurrences, &occurrences, reqs)
@@ -1110,12 +1121,13 @@ func countRequestsOccurrences(t *testing.T, conns *network.Connections, reqs map
 				continue
 			}
 
-			expectedStatus := testutil.StatusFromPath(req.URL.Path)
 			if key.Path.Content.Get() != req.URL.Path {
 				continue
 			}
+
+			expectedStatus := testutil.StatusFromPath(req.URL.Path)
 			if requests, exists := stats.Data[expectedStatus]; exists && requests.Count > 0 {
-				occurrences++
+				occurrences += requests.Count
 				reqs[req] = true
 				break
 			}
