@@ -37,6 +37,9 @@
   needs: ["deploy_suse_rpm_testing_x64-a7"]
 
 .kitchen_scenario_suse_arm64_a7:
+  variables:
+    KITCHEN_OSVERS: "sles-15"
+    DEFAULT_KITCHEN_OSVERS: "sles-15"
   extends:
     - .kitchen_agent_a7
     - .kitchen_os_suse
@@ -159,9 +162,6 @@ kitchen_suse_upgrade7_iot_agent_x64-a7:
     - .kitchen_test_upgrade7_iot_agent
 
 kitchen_suse_process_agent_x64-a7:
-  variables:
-    KITCHEN_OSVERS: "sles-15"
-    DEFAULT_KITCHEN_OSVERS: "sles-15"
   extends:
     - .kitchen_scenario_suse_x64_a7
     - .kitchen_test_process_agent
@@ -184,9 +184,6 @@ kitchen_suse_upgrade7_iot_agent_arm64-a7:
     - .kitchen_test_upgrade7_iot_agent
 
 kitchen_suse_process_agent_arm64-a7:
-  variables:
-    KITCHEN_OSVERS: "sles-15"
-    DEFAULT_KITCHEN_OSVERS: "sles-15"
   extends:
     - .kitchen_scenario_suse_arm64_a7
     - .kitchen_test_process_agent
