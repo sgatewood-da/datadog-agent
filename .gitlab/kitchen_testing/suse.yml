@@ -40,8 +40,6 @@
   variables:
     KITCHEN_OSVERS: "sles-15"
     DEFAULT_KITCHEN_OSVERS: "sles-15"
-    CHEF_VERSION: 18.3.0
-    CHEF_LICENSE: "accept-no-persist"
   extends:
     - .kitchen_agent_a7
     - .kitchen_os_suse
