@@ -3,6 +3,10 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2016-present Datadog, Inc.
 
+// Portions of this code are taken from the gopsutil project
+// https://github.com/shirou/gopsutil .  This code is licensed under the New BSD License
+// copyright WAKAYAMA Shirou, and the gopsutil contributors
+
 package utils
 
 import (
@@ -71,8 +75,8 @@ func GetInformation() *InfoStat {
 			info.KernelArch = runtime.GOARCH
 
 			pi := platform.CollectInfo()
-			info.Platform, _ = pi.OS.Value()
-			info.PlatformFamily, _ = pi.OS.Value()
+			info.Platform = pi.OS.ValueOrDefault()
+			info.PlatformFamily = pi.OS.ValueOrDefault()
 
 			info.PlatformVersion, _ = winutil.GetWindowsBuildString()
 			info.HostID = getUUID()

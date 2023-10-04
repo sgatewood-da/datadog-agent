@@ -38,8 +38,8 @@ type dependencies struct {
 
 	// Resources is enabled by default for most binaries. But even for binaries where we don't want to send the
 	// 'resources' paylod, like dogstatsd, we still need the resources Component. This is because the resources data
-	// is embedded in other metadata payload like 'host'. This means that even if resources is disabld it might be
-	// require in the build to the `Get` method is available.
+	// is embedded in other metadata payload like 'host'. This means that even if resources is disabled it might be
+	// required in the build in order for the `Get` method to be available.
 	//
 	// This is why we have a Params struct for resources. It's `optional` so most of the binaries don't have to
 	// supply a Params struct but only need to import the metadata.Bundle.

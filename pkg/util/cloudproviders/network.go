@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	networkIDCacheKey = "network.id"
+	networkIDCacheKey = "networkID"
 )
 
 // GetNetworkID retrieves the network_id which can be used to improve network

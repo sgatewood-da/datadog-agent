@@ -84,6 +84,24 @@ type Params struct {
 	DefaultLogFile string
 }
 
+// provideAggregator inject the aggregator demultiplexer to FX until we migrate it to a proper component. This allows
+// other already migrated components to request it.
+func provideAggregator(config config.Component, log log.Component, sharedForwarder defaultforwarder.Component) (*aggregator.AgentDemultiplexer, error) {
+	opts := aggregator.DefaultAgentDemultiplexerOptions()
+	opts.UseOrchestratorForwarder = false
+	opts.UseEventPlatformForwarder = false
+	opts.EnableNoAggregationPipeline = config.GetBool("dogstatsd_no_aggregation_pipeline")
+	hname, err := hostname.Get(context.TODO())
+	if err != nil {
+		log.Warnf("Error getting hostname: %s", err)
+		hname = ""
+	}
+	log.Debugf("Using hostname: %s", hname)
+	demux := aggregator.InitAndStartAgentDemultiplexer(log, sharedForwarder, opts, hname)
+	demux.AddAgentStartupTelemetry(version.AgentVersion)
+	return demux, nil
+}
+
 func RunDogstatsdFct(cliParams *CLIParams, defaultConfPath string, defaultLogFile string, fct interface{}) error {
 	params := &Params{
 		DefaultLogFile: defaultLogFile,
@@ -107,24 +125,7 @@ func RunDogstatsdFct(cliParams *CLIParams, defaultConfPath string, defaultLogFil
 		dogstatsd.Bundle,
 		forwarder.Bundle,
 		fx.Provide(defaultforwarder.NewParams),
-		// injecting the aggregator demultiplexer to FX until we migrate it to a proper component. This allows
-		// other already migrated components to request it.
-		fx.Provide(func(config config.Component, log log.Component, sharedForwarder defaultforwarder.Component) (*aggregator.AgentDemultiplexer, error) {
-			opts := aggregator.DefaultAgentDemultiplexerOptions()
-			opts.UseOrchestratorForwarder = false
-			opts.UseEventPlatformForwarder = false
-			opts.EnableNoAggregationPipeline = config.GetBool("dogstatsd_no_aggregation_pipeline")
-			hname, err := hostname.Get(context.TODO())
-			if err != nil {
-				log.Warnf("Error getting hostname: %s", err)
-				hname = ""
-			}
-			log.Debugf("Using hostname: %s", hname)
-			demux := aggregator.InitAndStartAgentDemultiplexer(log, sharedForwarder, opts, hname)
-			demux.AddAgentStartupTelemetry(version.AgentVersion)
-			return demux, nil
-
-		}),
+		fx.Provide(provideAggregator),
 		// injecting the shared Serializer to FX until we migrate it to a prpoper component. This allows other
 		// already migrated components to request it.
 		fx.Provide(func(demux *aggregator.AgentDemultiplexer) serializer.MetricSerializer {

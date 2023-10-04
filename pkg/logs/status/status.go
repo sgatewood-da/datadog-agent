@@ -80,11 +80,17 @@ type Status struct {
 
 // SetCurrentTransport sets the current transport used by the log agent.
 func SetCurrentTransport(t Transport) {
+	globalsLock.Lock()
+	defer globalsLock.Unlock()
+
 	currentTransport = t
 }
 
 // GetCurrentTransport returns the current transport used by the log agent.
 func GetCurrentTransport() Transport {
+	globalsLock.Lock()
+	defer globalsLock.Unlock()
+
 	return currentTransport
 }
 
