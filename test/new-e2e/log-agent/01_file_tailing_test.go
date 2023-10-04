@@ -13,10 +13,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/utils/e2e"
-	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/utils/e2e/params"
 	"github.com/DataDog/test-infra-definitions/components/datadog/agentparams"
 	"github.com/DataDog/test-infra-definitions/scenarios/aws/vm/ec2params"
+
+	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/utils/e2e"
+	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/utils/e2e/params"
 )
 
 // vmFakeintakeSuite defines a test suite for the log agent interacting with a virtual machine and fake intake.
@@ -33,7 +34,8 @@ func logsExampleStackDef(vmParams []ec2params.Option, agentParams ...agentparams
     service: hello
     source: custom_log
 `
-	return e2e.FakeIntakeStackDef(nil, agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", config))
+	return e2e.FakeIntakeStackDef(e2e.WithAgentParams(agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", config)))
+	// return e2e.FakeIntakeStackDef(nil, agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", config))
 
 }
 

@@ -15,7 +15,7 @@ type vmFakeintakeSuite struct {
 }
 
 func logsExampleStackDef(vmParams []ec2params.Option, agentParams ...agentparams.Option) *e2e.StackDefinition[e2e.FakeIntakeEnv] {
-	return e2e.FakeIntakeStackDef(nil, agentparams.WithLogs())
+	return e2e.FakeIntakeStackDef(e2e.WithAgentParams(agentparams.WithLogs()))
 
 }
 func TestE2EVMFakeintakeSuite(t *testing.T) {

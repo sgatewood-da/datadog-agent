@@ -27,8 +27,10 @@ func logsExampleStackDef(vmParams []ec2params.Option, agentParams ...agentparams
     source: custom_log
 `
 
-	return e2e.FakeIntakeStackDef([]ec2params.Option{ec2params.WithOS(ec2os.WindowsOS)}, agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", windowsConfig))
-
+	return e2e.FakeIntakeStackDef(e2e.WithVMParams(
+		ec2params.WithOS(ec2os.WindowsOS)),
+		e2e.WithAgentParams(agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", windowsConfig)),
+	)
 }
 func TestE2EVMFakeintakeSuite(t *testing.T) {
 	e2e.Run(t, &vmFakeintakeSuite{}, logsExampleStackDef(nil), params.WithDevMode())

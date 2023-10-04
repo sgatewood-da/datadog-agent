@@ -20,7 +20,10 @@ func (s *vmFakeintakeSuite) Test2WindowsTests() {
     service: hello-windows
     source: custom_windows_log
 `
-	s.UpdateEnv(e2e.FakeIntakeStackDef([]ec2params.Option{ec2params.WithOS(ec2os.WindowsOS)}, agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", windowsConfig)))
+	s.UpdateEnv(e2e.FakeIntakeStackDef(e2e.WithVMParams(
+		ec2params.WithOS(ec2os.WindowsOS)),
+		e2e.WithAgentParams(agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", windowsConfig)),
+	))
 
 	time.Sleep(1 * time.Second)
 	s.T().Run("WindowsSubTest1", func(t *testing.T) {

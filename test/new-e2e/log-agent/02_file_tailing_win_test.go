@@ -27,7 +27,10 @@ func (s *vmFakeintakeSuite) TestWindowsLogTailing() {
     service: hello
     source: custom_log
 `
-	s.UpdateEnv(e2e.FakeIntakeStackDef([]ec2params.Option{ec2params.WithOS(ec2os.WindowsOS)}, agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", windowsConfig)))
+	s.UpdateEnv(e2e.FakeIntakeStackDef(e2e.WithVMParams(
+		ec2params.WithOS(ec2os.WindowsOS)),
+		e2e.WithAgentParams(agentparams.WithLogs(), agentparams.WithIntegration("custom_logs.d", windowsConfig)),
+	))
 
 	// Clean up any existing log files
 	s.cleanUp()
