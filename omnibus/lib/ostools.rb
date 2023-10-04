@@ -6,15 +6,15 @@ def linux_target?()
 end
 
 def redhat_target?()
-    if ENV.has_key?("DD_FORCE_PLATFORM_FAMILY")
-        return %w(rhel fedora).include? ENV["DD_FORCE_PLATFORM_FAMILY"]
+    if not project.host_distrib.nil?
+      return %w(rhel fedora).include? project.host_distrib
     end
     return %w(rhel fedora).include? ohai['platform_family']
 end
 
 def suse_target?()
-    if ENV.has_key?("DD_FORCE_PLATFORM_FAMILY")
-        return ENV["DD_FORCE_PLATFORM_FAMILY"] == 'suse'
+    if not project.host_distrib.nil?
+      return project.host_distrib == 'suse'
     end
     return %w(suse).include? ohai['platform_family']
 end
