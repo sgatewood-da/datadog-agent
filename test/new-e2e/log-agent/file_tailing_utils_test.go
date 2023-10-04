@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	fi "github.com/DataDog/datadog-agent/test/fakeintake/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	fi "github.com/DataDog/datadog-agent/test/fakeintake/client"
 )
 
 // generateLog generates and verify log contents
@@ -79,7 +80,7 @@ func (s *vmFakeintakeSuite) cleanUp() {
 		if err != nil {
 			require.NoErrorf(t, err, "Having issue cleaning log files, retrying... %s", output)
 		} else {
-			s.T().Log("Sucessfully cleaning up")
+			s.T().Log("Successfully cleaning up")
 		}
 	}, 5*time.Minute, 2*time.Second)
 }
