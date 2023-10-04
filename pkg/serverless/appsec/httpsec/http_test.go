@@ -18,6 +18,7 @@ func TestParseBodyJson(t *testing.T) {
 			"content-type": {"application/json;charset=utf-8"},
 		},
 		&rawBody,
+		false,
 	)
 
 	require.Equal(t, map[string]any{
@@ -32,9 +33,25 @@ func TestParseBodyUrlEncoded(t *testing.T) {
 			"content-type": {"application/x-www-form-urlencoded"},
 		},
 		&rawBody,
+		false,
 	)
 
 	require.Equal(t, map[string][]string{"foo": {"1337"}, "bar": {"b a z"}}, payload)
+}
+
+func TestParseBodyBase64Json(t *testing.T) {
+	rawBody := "eyAiZm9vIjogMTMzNyB9"
+	payload := parseBody(
+		map[string][]string{
+			"content-type": {"application/json"},
+		},
+		&rawBody,
+		true,
+	)
+
+	require.Equal(t, map[string]any{
+		"foo": 1337., // JSON numbers are float64 in go
+	}, payload)
 }
 
 func TestParseBodyMultipartFormData(t *testing.T) {
@@ -69,6 +86,7 @@ func TestParseBodyMultipartFormData(t *testing.T) {
 			"content-type": {"multipart/form-data; boundary=B0UND4RY"},
 		},
 		&rawBody,
+		false,
 	)
 
 	require.Equal(t, map[string]any{
