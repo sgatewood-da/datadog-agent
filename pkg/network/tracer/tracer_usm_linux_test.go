@@ -822,10 +822,10 @@ func TestHTTPGoTLSAttachProbes(t *testing.T) {
 		}
 
 		// TODO fix TestHTTPGoTLSAttachProbes on these Fedora versions
-		if skipFedora(t) {
-			// TestHTTPGoTLSAttachProbes fails consistently in CI on Fedora 36,37
-			t.Skip("TestHTTPGoTLSAttachProbes fails on this OS consistently")
-		}
+		//if skipFedora(t) {
+		//	// TestHTTPGoTLSAttachProbes fails consistently in CI on Fedora 36,37
+		//	t.Skip("TestHTTPGoTLSAttachProbes fails on this OS consistently")
+		//}
 
 		t.Run("new process", func(t *testing.T) {
 			testHTTPGoTLSCaptureNewProcess(t, config.New())
