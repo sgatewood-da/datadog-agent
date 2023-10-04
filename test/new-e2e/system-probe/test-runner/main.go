@@ -38,8 +38,8 @@ type TestConfig struct {
 
 const (
 	Testsuite   = "testsuite"
-	TestDirRoot = "/opt/system-probe-tests"
-	GoTestSum   = "/opt/go/bin/gotestsum"
+	TestDirRoot = "/home/kernel-version-testing/kmt-ramfs/system-probe-tests"
+	GoTestSum   = "/home/kernel-version-testing/kmt-ramfs/go/bin/gotestsum"
 
 	XMLDir       = "junit"
 	JSONDir      = "pkgjson"
@@ -132,7 +132,7 @@ func buildCommandArgs(junitPath string, jsonPath string, file string, testConfig
 		fmt.Sprintf("--rerun-fails=%d", testConfig.retryCount),
 		"--rerun-fails-max-failures=100",
 		"--raw-command", "--",
-		"/opt/go/bin/test2json", "-t", "-p", pkg, file, "-test.v", "-test.count=1", "-test.timeout=" + getTimeout(pkg).String(),
+		"/home/kernel-version-testing/kmt-ramfs/go/bin/test2json", "-t", "-p", pkg, file, "-test.v", "-test.count=1", "-test.timeout=" + getTimeout(pkg).String(),
 	}
 
 	if testConfig.runTests != "" {

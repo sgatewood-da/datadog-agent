@@ -258,14 +258,14 @@ upload_minimized_btfs_arm64:
     - !reference [.write_ssh_key_file]
   script:
     - MOUNTFS="/home/kernel-version-testing/kmt-ramfs"
-    - DEPS_DIR="${MOUNTFS}/deps"
+    - DEPS_DIR=$MOUNTFS
     - DEPS_IMG="${MOUNTFS}/deps.img"
     - !reference [.shared_filters_and_queries]
     - INSTANCE_IP=$(aws ec2 describe-instances --filters $FILTER_TEAM $FILTER_MANAGED $FILTER_STATE $FILTER_PIPELINE "Name=instance-type,Values=${INSTANCE_TYPE}" --output text --query $QUERY_PRIVATE_IPS)
-    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "sudo bash -c 'mkdir ${MOUNTFS} && mount -t ramfs -o size=20g ramfs ${MOUNTFS} && dd if=/dev/zero of=${DEPS_IMG} bs=1G count=15 && mkfs.ext4 -F ${DEPS_IMG} && mkdir ${DEPS_DIR} && mount -o exec,loop ${DEPS_IMG} ${DEPS_DIR}'"
-    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "sudo bash -c 'mv /tmp/*.tar.gz ${DEPS_DIR} && tar xzf ${DEPS_DIR}/dependencies-${ARCH}.tar.gz --strip-components=1 -C ${DEPS_DIR} && tar xzf ${DEPS_DIR}/tests-${ARCH}.tar.gz --strip-components=1 -C ${DEPS_DIR} && tar xzf ${DEPS_DIR}/btfs-${ARCH}.tar.gz --strip-components=1 -C ${DEPS_DIR} && find ${DEPS_DIR} -type f && umount ${DEPS_IMG}'"
+    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "sudo bash -c 'mkdir ${MOUNTFS} && mount -t ramfs -o size=20g ramfs ${MOUNTFS}'"
+    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "sudo bash -c 'mv /tmp/*.tar.gz ${DEPS_DIR} && tar xzf ${DEPS_DIR}/dependencies-${ARCH}.tar.gz --strip-components=1 -C ${DEPS_DIR} && tar xzf ${DEPS_DIR}/tests-${ARCH}.tar.gz --strip-components=1 -C ${DEPS_DIR} && tar xzf ${DEPS_DIR}/btfs-${ARCH}.tar.gz --strip-components=1 -C ${DEPS_DIR}'"
     - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "sudo bash -c 'find ${MOUNTFS} -name *.o -type f -exec chown root:root {} \;'"
-    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "sudo bash -c 'find ${MOUNTFS} -name *.o -type f -exec chown root:root {} \;'"
+    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "sudo bash -c 'echo \"${MOUNTFS} 100.0.0.0/8(ro,no_root_squash,no_subtree_check)\" > /etc/exports && exportfs -a'"
 
 setup_dependencies_x64:
   extends:
@@ -357,11 +357,9 @@ kernel_matrix_testing_setup_env:
     - MICRO_VM_IP=$(cat $CI_PROJECT_DIR/stack.outputs | grep $ARCH-$TAG | cut -d ' ' -f 2)
     - MICRO_VM_NAME=$(cat $CI_PROJECT_DIR/stack.outputs | grep $ARCH-$TAG | cut -d ' ' -f 1)
     # ssh into each micro-vm and run initialization script. This script will also run the tests.
-    - DEPS_IMG="/home/kernel-version-testing/kmt-ramfs/deps.img"
+    - MOUNTFS="/home/kernel-version-testing/kmt-ramfs"
     - START=`date +%s`
-    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "time { (sudo virsh attach-disk \$(sudo virsh list --name | grep ${MICRO_VM_NAME} | head -n 1 | tr -d '\n') $DEPS_IMG vdb --driver qemu --type disk --mode readonly) }"
-    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "ssh -o StrictHostKeyChecking=no -i /home/kernel-version-testing/ddvm_rsa root@${MICRO_VM_IP} 'time { (mount -o ro,noload /dev/vdb /opt) }'"
-    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "ssh -o StrictHostKeyChecking=no -i /home/kernel-version-testing/ddvm_rsa root@${MICRO_VM_IP} 'time { (cp /opt/micro-vm-init.sh / && cp /opt/test-runner / && cp /opt/test-json-review / && chmod +x /micro-vm-init.sh) }'"
+    - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "ssh -o StrictHostKeyChecking=no -i /home/kernel-version-testing/ddvm_rsa root@${MICRO_VM_IP} 'time { (cp ${MOUNTFS}/micro-vm-init.sh / && cp ${MOUNTFS}/test-runner / && cp ${MOUNTFS}/test-json-review / && chmod +x /micro-vm-init.sh) }'"
     - END=`date +%s`
     - echo `expr $END - $START`
     - ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEY_FILE ubuntu@$INSTANCE_IP "ssh -o StrictHostKeyChecking=no -i /home/kernel-version-testing/ddvm_rsa root@${MICRO_VM_IP} '/micro-vm-init.sh ${GO_VERSION} ${RETRY} ${ARCH} ${RUNNER_CMD}'"
