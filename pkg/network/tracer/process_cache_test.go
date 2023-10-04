@@ -9,13 +9,20 @@ package tracer
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go4.org/intern"
 
+	"github.com/DataDog/datadog-agent/pkg/eventmonitor"
+	emconfig "github.com/DataDog/datadog-agent/pkg/eventmonitor/config"
+	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/events"
+	secconfig "github.com/DataDog/datadog-agent/pkg/security/config"
 )
 
 func TestProcessCacheProcessEvent(t *testing.T) {
@@ -326,4 +333,65 @@ func TestProcessCacheGet(t *testing.T) {
 		})
 	}
 
+}
+
+func TestProcessCacheEvent(t *testing.T) {
+	emcfg := &emconfig.Config{
+		SocketPath:             "/opt/datadog-agent/run/event-monitor.sock",
+		NetworkConsumerEnabled: true,
+	}
+
+	secconfig, err := secconfig.NewConfig()
+	require.NoError(t, err)
+	opts := eventmonitor.Opts{}
+	evm, err := eventmonitor.NewEventMonitor(emcfg, secconfig, opts)
+	require.NoError(t, err)
+	t.Cleanup(evm.Close)
+	networkConsumer, err := events.NewNetworkConsumer(evm)
+	require.NoError(t, err)
+	evm.RegisterEventConsumer(networkConsumer)
+
+	require.NoError(t, evm.Init())
+	require.NoError(t, evm.Start())
+
+	cfg := testConfig()
+	cfg.EnableProcessEventMonitoring = true
+	tr := setupTracer(t, cfg)
+
+	// run a process with env vars DD_ENV, DD_SERVICE, and DD_VERSION
+	cmd := exec.Command("curl", "https://www.example.com")
+	cmd.Env = append(os.Environ(), []string{
+		"DD_ENV=env1",
+		"DD_SERVICE=service1",
+		"DD_VERSION=version1",
+	}...)
+
+	err = cmd.Start()
+	require.NoError(t, err)
+	pid := cmd.Process.Pid
+	require.NoError(t, cmd.Wait())
+
+	start := time.Now().UnixNano()
+	require.Eventually(t, func() bool {
+		_, found := tr.processCache.Get(uint32(pid), start)
+		return found
+	}, 3*time.Second, 10*time.Millisecond)
+
+	var conn network.ConnectionStats
+	require.Eventually(t, func() bool {
+		conns := getConnections(t, tr)
+		t.Log(conns)
+		for _, c := range conns.Conns {
+			if c.Pid == uint32(pid) {
+				conn = c
+				return true
+			}
+		}
+
+		return false
+	}, 3*time.Second, 10*time.Millisecond, "could not find connection with pid %d", pid)
+
+	assert.Contains(t, conn.Tags, "env:env1", "env tag not found")
+	assert.Contains(t, conn.Tags, "version:version1", "version tag not found")
+	assert.Contains(t, conn.Tags, "service:service1", "service tag not found")
 }
