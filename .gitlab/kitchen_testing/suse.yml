@@ -44,6 +44,7 @@
     - .kitchen_agent_a7
     - .kitchen_os_suse
     - .kitchen_ec2_arm64
+    - .kitchen_ec2_location_us_east_1
   needs: ["deploy_suse_rpm_testing_arm64-a7"]
 
 # Kitchen: final test matrix (tests * scenarios)
