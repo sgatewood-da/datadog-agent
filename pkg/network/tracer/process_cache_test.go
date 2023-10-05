@@ -24,6 +24,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/events"
 	secconfig "github.com/DataDog/datadog-agent/pkg/security/config"
+	"github.com/DataDog/datadog-agent/pkg/security/ebpf/kernel"
 	secmodule "github.com/DataDog/datadog-agent/pkg/security/module"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
@@ -339,6 +340,12 @@ func TestProcessCacheGet(t *testing.T) {
 }
 
 func TestProcessCacheEvent(t *testing.T) {
+	kv, err := kernel.NewKernelVersion()
+	require.NoError(t, err)
+	if !kv.IsRH7Kernel() && !kv.IsRH8Kernel() && kv.Code < kernel.Kernel4_15 {
+		t.Skip("network process event monitoring not supported on this kernel")
+	}
+
 	lvl, _ := log.GetLogLevel()
 	log.ChangeLogLevel(seelog.Default, "TRACE")
 	t.Cleanup(func() { log.ChangeLogLevel(seelog.Default, lvl.String()) })
