@@ -6,15 +6,17 @@ def linux_target?()
 end
 
 def redhat_target?()
-    if not project.host_distrib.nil?
-      return %w(rhel fedora).include? project.host_distrib
+  puts 'Checking if this is redhat. host_distrib value: #{project.host_distribution}'
+    if not project.host_distribution.nil?
+      return %w(rhel fedora).include? project.host_distribution
     end
     return %w(rhel fedora).include? ohai['platform_family']
 end
 
 def suse_target?()
-    if not project.host_distrib.nil?
-      return project.host_distrib == 'suse'
+  puts 'Checking if this is suse redhat. host_distrib value: #{project.host_distribution}'
+    if not project.host_distribution.nil?
+      return project.host_distribution == 'suse'
     end
     return %w(suse).include? ohai['platform_family']
 end
