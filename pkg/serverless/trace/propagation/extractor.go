@@ -68,14 +68,3 @@ func getPriority(sp ddtrace.SpanContext) (priority int) {
 	}
 	return
 }
-
-type kvTextMap map[string]string
-
-func (m kvTextMap) ForeachKey(handler func(key, val string) error) error {
-	for k, v := range m {
-		if err := handler(k, v); err != nil {
-			return err
-		}
-	}
-	return nil
-}

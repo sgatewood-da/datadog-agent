@@ -79,7 +79,7 @@ func sqsMessageCarrier(event events.SQSMessage) (tracer.TextMapReader, error) {
 }
 
 func sqsMessageAttrCarrier(attr events.SQSMessageAttribute) (tracer.TextMapReader, error) {
-	var carrier kvTextMap
+	var carrier tracer.TextMapCarrier
 	if attr.DataType != "String" {
 		return nil, errors.New("Unsupported DataType in _datadog payload")
 	}
@@ -114,7 +114,7 @@ func snsSqsMessageCarrier(event events.SQSMessage) (tracer.TextMapReader, error)
 	if err != nil {
 		return nil, fmt.Errorf("Error decoding binary: %w", err)
 	}
-	var carrier kvTextMap
+	var carrier tracer.TextMapCarrier
 	if err = json.Unmarshal(attr, &carrier); err != nil {
 		return nil, fmt.Errorf("Error unmarshaling the decoded binary: %w", err)
 	}
