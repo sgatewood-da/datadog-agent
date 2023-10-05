@@ -57,7 +57,7 @@
     - chmod 0644 /tmp/system-probe/*.o
     - chmod 0744 /tmp/system-probe/system-probe /tmp/system-probe/clang-bpf /tmp/system-probe/llc-bpf
     # use --skip-deps since the deps are installed by `before_script`
-    - inv -e agent.omnibus-build --release-version "$RELEASE_VERSION" --major-version "$AGENT_MAJOR_VERSION" --python-runtimes "$PYTHON_RUNTIMES" --base-dir $OMNIBUS_BASE_DIR ${USE_S3_CACHING} --skip-deps --go-mod-cache="$GOPATH/pkg/mod" --system-probe-bin=/tmp/system-probe ${HOST_DISTRIBUTION}
+    - inv -e agent.omnibus-build --release-version "$RELEASE_VERSION" --major-version "$AGENT_MAJOR_VERSION" --python-runtimes "$PYTHON_RUNTIMES" --base-dir $OMNIBUS_BASE_DIR ${USE_S3_CACHING} --skip-deps --go-mod-cache="$GOPATH/pkg/mod" --system-probe-bin=/tmp/system-probe ${OMNIBUS_TASK_EXTRA_PARAMS}
     - ls -la $OMNIBUS_PACKAGE_DIR
     # Copy to a different directory to avoid collisions if a job downloads both the RPM and SUSE RPM artifacts
     - mkdir -p $OMNIBUS_PACKAGE_DIR_SUSE && cp $OMNIBUS_PACKAGE_DIR/* $OMNIBUS_PACKAGE_DIR_SUSE
@@ -119,7 +119,7 @@ agent_suse-arm64-a7:
     AGENT_MAJOR_VERSION: 7
     PYTHON_RUNTIMES: '3'
     PACKAGE_ARCH: arm64
-    HOST_DISTRIBUTION: suse
+    OMNIBUS_TASK_EXTRA_PARAMS: '--host-distribution=suse'
   before_script:
     - source /root/.bashrc
     - export RELEASE_VERSION=$RELEASE_VERSION_7
