@@ -342,6 +342,7 @@ func TestProcessCacheEvent(t *testing.T) {
 	lvl, _ := log.GetLogLevel()
 	log.ChangeLogLevel(seelog.Default, "TRACE")
 	t.Cleanup(func() { log.ChangeLogLevel(seelog.Default, lvl.String()) })
+
 	f, err := os.CreateTemp("", "event-monitor.*.sock")
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -384,6 +385,7 @@ func TestProcessCacheEvent(t *testing.T) {
 	err = cmd.Start()
 	require.NoError(t, err)
 	pid := cmd.Process.Pid
+	t.Logf("launched curl with pid %d", pid)
 	require.NoError(t, cmd.Wait())
 
 	start := time.Now().UnixNano()
