@@ -5,14 +5,6 @@ def linux?()
     return %w(rhel debian fedora suse gentoo slackware arch exherbo).include? ohai['platform_family']
 end
 
-def redhat?()
-    return %w(rhel fedora).include? ohai['platform_family']
-end
-
-def suse?()
-    return %w(suse).include? ohai['platform_family']
-end
-
 def debian?()
     return ohai['platform_family'] == 'debian'
 end
