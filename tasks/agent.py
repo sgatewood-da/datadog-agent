@@ -574,7 +574,7 @@ def omnibus_run_task(
         if base_dir:
             overrides_cmd = f"--override=base_dir:{base_dir}"
         if host_distribution:
-            overrides_cmd += f"--override=host_distribution={host_distribution}"
+            overrides_cmd += f" --override=host_distribution:{host_distribution}"
 
         omnibus = "bundle exec omnibus"
         if sys.platform == 'win32':
