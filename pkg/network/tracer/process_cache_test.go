@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cihub/seelog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go4.org/intern"
@@ -24,6 +25,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/events"
 	secconfig "github.com/DataDog/datadog-agent/pkg/security/config"
 	secmodule "github.com/DataDog/datadog-agent/pkg/security/module"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 func TestProcessCacheProcessEvent(t *testing.T) {
@@ -337,6 +339,9 @@ func TestProcessCacheGet(t *testing.T) {
 }
 
 func TestProcessCacheEvent(t *testing.T) {
+	lvl, _ := log.GetLogLevel()
+	log.ChangeLogLevel(seelog.Default, "TRACE")
+	t.Cleanup(func() { log.ChangeLogLevel(seelog.Default, lvl.String()) })
 	f, err := os.CreateTemp("", "event-monitor.*.sock")
 	require.NoError(t, err)
 	t.Cleanup(func() {
