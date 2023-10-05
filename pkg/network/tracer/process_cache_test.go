@@ -23,6 +23,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/events"
 	secconfig "github.com/DataDog/datadog-agent/pkg/security/config"
+	secmodule "github.com/DataDog/datadog-agent/pkg/security/module"
 )
 
 func TestProcessCacheProcessEvent(t *testing.T) {
@@ -336,13 +337,22 @@ func TestProcessCacheGet(t *testing.T) {
 }
 
 func TestProcessCacheEvent(t *testing.T) {
+	f, err := os.CreateTemp("", "event-monitor.*.sock")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		f.Close()
+		os.Remove(f.Name())
+	})
+
 	emcfg := &emconfig.Config{
-		SocketPath:             "/opt/datadog-agent/run/event-monitor.sock",
+		SocketPath:             f.Name(),
 		NetworkConsumerEnabled: true,
 	}
 
 	secconfig, err := secconfig.NewConfig()
 	require.NoError(t, err)
+	secmodule.DisableRuntimeSecurity(secconfig)
+
 	opts := eventmonitor.Opts{}
 	evm, err := eventmonitor.NewEventMonitor(emcfg, secconfig, opts)
 	require.NoError(t, err)
@@ -373,8 +383,8 @@ func TestProcessCacheEvent(t *testing.T) {
 
 	start := time.Now().UnixNano()
 	require.Eventually(t, func() bool {
-		_, found := tr.processCache.Get(uint32(pid), start)
-		return found
+		p, found := tr.processCache.Get(uint32(pid), start)
+		return found && len(p.Envs) > 0
 	}, 3*time.Second, 10*time.Millisecond)
 
 	var conn network.ConnectionStats
