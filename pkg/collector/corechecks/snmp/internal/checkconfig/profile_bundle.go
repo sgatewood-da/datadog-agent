@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 )
 
-func loadZipProfiles() (profileConfigMap, error) {
+func loadBundleZipProfiles() (profileConfigMap, error) {
 	zipFilePath := getGZipFilePath()
 	file, err := os.Open(zipFilePath)
 	if err != nil {
