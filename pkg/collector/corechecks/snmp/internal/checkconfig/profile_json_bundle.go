@@ -3,11 +3,13 @@ package checkconfig
 import (
 	"compress/gzip"
 	"encoding/json"
-	"github.com/DataDog/datadog-agent/pkg/networkdevice/profile/profiledefinition"
-	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/DataDog/datadog-agent/pkg/util/log"
+
+	"github.com/DataDog/datadog-agent/pkg/networkdevice/profile/profiledefinition"
 )
 
 func loadBundleZipProfiles() (profileConfigMap, error) {
