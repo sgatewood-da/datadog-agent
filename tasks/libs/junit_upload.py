@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from invoke.exceptions import Exit
 
 from ..flavor import AgentFlavor
-from .pipeline_notifications import DEFAULT_JIRA_PROJECT, DEFAULT_SLACK_CHANNEL, GITHUB_JIRA_MAP, GITHUB_SLACK_MAP
+from .pipeline_notifications import DEFAULT_JIRA_PROJECT, DEFAULT_SLACK_CHANNEL, GITHUB_JIRA_MAP, GITHUB_SLACK_MAP, GITHUB_JIRA_OVERRIDE
 
 CODEOWNERS_ORG_PREFIX = "@DataDog/"
 REPO_NAME_PREFIX = "github.com/DataDog/datadog-agent/"
@@ -74,8 +74,12 @@ def split_junitxml(xml_path, codeowners, output_dir):
         jira_project = GITHUB_JIRA_MAP.get(f"{CODEOWNERS_ORG_PREFIX}{main_owner}".casefold(), DEFAULT_JIRA_PROJECT)
         for test_case in suite.iter("testcase"):
             if any(child.tag == "failure" for child in test_case):
-                # Keep only the parent test name (remove all after the first '/' in test_case name)
-                test_name = f"{path}/{test_case.attrib['name'].split('/')[0]}"
+                if jira_project == "USMON" or "TestUSMSuite" in test_case.attrib["name"]:
+                    # USM tests don't want aggregation per parent test
+                    test_name = f"{path}/{test_case.attrib['name']}"
+                else:
+                    # Keep only the parent test name (remove all after the first '/' in test_case name)
+                    test_name = f"{path}/{test_case.attrib['name'].split('/')[0]}"
                 jira_card = retrieve_jira_card(test_name, jira_project, jira_cache)
                 test_case.attrib["jira_card"] = jira_card
         xml.getroot().append(suite)
@@ -286,6 +290,7 @@ def retrieve_jira_card(test_name, jira_project, jira_cache):
 
     try:
         j = JIRA(basic_auth=auth, server="https://datadoghq.atlassian.net/")
+        jira_project = GITHUB_JIRA_OVERRIDE.get(jira_project, jira_project)
         project = j.project(jira_project)
         search_query = f'project = "{project.name}" and summary ~ "{test_name}" and status != Done'
         issues = j.search_issues(search_query)

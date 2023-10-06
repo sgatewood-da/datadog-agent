@@ -74,6 +74,10 @@ GITHUB_JIRA_MAP = {
     "@datadog/agent-cspm": "SEC",
     "@datadog/telemetry-and-analytics": DEFAULT_JIRA_PROJECT,
 }
+GITHUB_JIRA_OVERRIDE = {
+    "USMON": "CIMP",
+    "SEC": "CIMP",
+}
 
 
 def read_owners(owners_file):
