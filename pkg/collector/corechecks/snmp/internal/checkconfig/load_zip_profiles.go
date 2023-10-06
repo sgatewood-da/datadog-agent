@@ -1,62 +1,58 @@
 package checkconfig
 
 import (
-	"archive/zip"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/DataDog/datadog-agent/pkg/networkdevice/profile/profiledefinition"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"io"
+	"os"
 	"path/filepath"
 )
 
 func loadZipProfiles() (profileConfigMap, error) {
-	zipFilePath := getZipFilePath()
-	reader, err := zip.OpenReader(zipFilePath)
+	zipFilePath := getGZipFilePath()
+	file, err := os.Open(zipFilePath)
 	if err != nil {
 		return nil, err
 	}
-	for _, file := range reader.File {
-		fmt.Printf("file.Name: %s\n", file.Name)
-		if file.Name == "custom.profiles" {
-			open, err := file.Open()
-			if err != nil {
-				return nil, err
-			}
-			all, err := io.ReadAll(open)
-			if err != nil {
-				return nil, err
-			}
-			fmt.Printf("CONTENT: %s\n", string(all))
-			downloadedProfiles := profiledefinition.DownloadProfilesResponse{}
-			err = json.Unmarshal(all, &downloadedProfiles)
-			if err != nil {
-				return nil, err
-			}
-			//fmt.Printf("downloadedProfiles: %#v\n", downloadedProfiles)
-			//fmt.Printf("downloadedProfiles: %#v\n", downloadedProfiles)
-
-			profiles := make(profileConfigMap)
-			for _, profile := range downloadedProfiles.Profiles {
-				if profile.Profile.Name == "" {
-					//return nil, fmt.Errorf("a profile from zip have a missing name")
-					// TODO: raise error?
-					continue
-				}
-
-				if _, exist := profiles[profile.Profile.Name]; exist {
-					// TODO: this should not happen
-					log.Warnf("duplicate profile found: %s", profile.Profile.Name)
-					continue
-				}
-				profiles[profile.Profile.Name] = profileConfig{Definition: profile.Profile}
-			}
-			return profiles, nil
-		}
+	defer file.Close()
+	reader, err := gzip.NewReader(file)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("HANDLE ZIP FILE")
+	all, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("CONTENT: %s\n", string(all))
+	downloadedProfiles := profiledefinition.DownloadProfilesResponse{}
+	err = json.Unmarshal(all, &downloadedProfiles)
+	if err != nil {
+		return nil, err
+	}
+	//fmt.Printf("downloadedProfiles: %#v\n", downloadedProfiles)
+	//fmt.Printf("downloadedProfiles: %#v\n", downloadedProfiles)
+
+	profiles := make(profileConfigMap)
+	for _, profile := range downloadedProfiles.Profiles {
+		if profile.Profile.Name == "" {
+			//return nil, fmt.Errorf("a profile from zip have a missing name")
+			// TODO: raise error?
+			continue
+		}
+
+		if _, exist := profiles[profile.Profile.Name]; exist {
+			// TODO: this should not happen
+			log.Warnf("duplicate profile found: %s", profile.Profile.Name)
+			continue
+		}
+		profiles[profile.Profile.Name] = profileConfig{Definition: profile.Profile}
+	}
+	return profiles, nil
 }
 
-func getZipFilePath() string {
+func getGZipFilePath() string {
 	return getProfileConfdRoot(filepath.Join(userProfilesFolder, profilesZipFile))
 }

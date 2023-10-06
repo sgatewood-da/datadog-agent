@@ -492,7 +492,7 @@ func NewCheckConfig(rawInstance integration.Data, rawInitConfig integration.Data
 
 	// TODO: Move profiles select logic to a separate function
 	// Profile Configs
-	zipFilePath := getZipFilePath()
+	zipFilePath := getGZipFilePath()
 	log.Debugf("zipFilePath: %s", zipFilePath)
 	zipFileExist := false
 	if _, err := os.Stat(zipFilePath); !errors.Is(err, os.ErrNotExist) {
