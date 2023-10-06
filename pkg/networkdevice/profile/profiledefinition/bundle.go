@@ -18,8 +18,8 @@ type ProfileBundleProfileItem struct {
 	Profile  ProfileDefinition            `json:"profile"`
 }
 
-// ProfileBundleResponse represent a list of profiles meant to be downloaded by user.
-type ProfileBundleResponse struct {
+// ProfileBundle represent a list of profiles meant to be downloaded by user.
+type ProfileBundle struct {
 	CreatedTimestamp int64                      `json:"created_timestamp"` // Millisecond
 	Profiles         []ProfileBundleProfileItem `json:"profiles"`
 }

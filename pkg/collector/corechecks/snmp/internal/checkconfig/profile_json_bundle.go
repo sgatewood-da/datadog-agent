@@ -24,7 +24,7 @@ func loadBundleZipProfiles() (profileConfigMap, error) {
 }
 
 func unmarshallProfilesBundleJson(jsonStr []byte) (profileConfigMap, error) {
-	bundle := profiledefinition.ProfileBundleResponse{}
+	bundle := profiledefinition.ProfileBundle{}
 	err := json.Unmarshal(jsonStr, &bundle)
 	if err != nil {
 		return nil, err
