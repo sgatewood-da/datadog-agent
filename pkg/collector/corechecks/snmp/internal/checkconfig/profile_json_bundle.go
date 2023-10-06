@@ -3,7 +3,6 @@ package checkconfig
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"github.com/DataDog/datadog-agent/pkg/networkdevice/profile/profiledefinition"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"io"
@@ -12,45 +11,60 @@ import (
 )
 
 func loadBundleZipProfiles() (profileConfigMap, error) {
-	zipFilePath := getGZipFilePath()
-	file, err := os.Open(zipFilePath)
+	jsonStr, err := getProfilesBundleJson()
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	reader, err := gzip.NewReader(file)
+
+	profiles, err := unmarshallProfilesBundleJson(jsonStr)
 	if err != nil {
 		return nil, err
 	}
-	all, err := io.ReadAll(reader)
+	return profiles, nil
+}
+
+func unmarshallProfilesBundleJson(jsonStr []byte) (profileConfigMap, error) {
+	bundle := profiledefinition.ProfileBundleResponse{}
+	err := json.Unmarshal(jsonStr, &bundle)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("CONTENT: %s\n", string(all))
-	downloadedProfiles := profiledefinition.ProfileBundleResponse{}
-	err = json.Unmarshal(all, &downloadedProfiles)
-	if err != nil {
-		return nil, err
-	}
-	//fmt.Printf("downloadedProfiles: %#v\n", downloadedProfiles)
-	//fmt.Printf("downloadedProfiles: %#v\n", downloadedProfiles)
 
 	profiles := make(profileConfigMap)
-	for _, profile := range downloadedProfiles.Profiles {
+	for _, profile := range bundle.Profiles {
 		if profile.Profile.Name == "" {
-			//return nil, fmt.Errorf("a profile from zip have a missing name")
-			// TODO: raise error?
+			log.Warnf("Profile with missing name: %s", profile.Profile.Name)
 			continue
 		}
 
 		if _, exist := profiles[profile.Profile.Name]; exist {
-			// TODO: this should not happen
 			log.Warnf("duplicate profile found: %s", profile.Profile.Name)
 			continue
 		}
-		profiles[profile.Profile.Name] = profileConfig{Definition: profile.Profile}
+		profiles[profile.Profile.Name] = profileConfig{
+			// TODO: Set isUserProfile
+			Definition: profile.Profile,
+		}
 	}
 	return profiles, nil
+}
+
+func getProfilesBundleJson() ([]byte, error) {
+	gzipFilePath := getGZipFilePath()
+	gzipFile, err := os.Open(gzipFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer gzipFile.Close()
+	gzipReader, err := gzip.NewReader(gzipFile)
+	if err != nil {
+		return nil, err
+	}
+	jsonStr, err := io.ReadAll(gzipReader)
+	if err != nil {
+		return nil, err
+	}
+	return jsonStr, nil
 }
 
 func getGZipFilePath() string {
