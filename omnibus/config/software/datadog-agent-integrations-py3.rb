@@ -101,7 +101,7 @@ if arm_target?
   blacklist_packages.push(/^pymqi==/)
 end
 
-if redhat_target? && !arm_target?
+if redhat? && !arm_target?
   # RPM builds are done on CentOS 6 which is based on glibc v2.12 however newer libraries require v2.17, see:
   # https://blog.rust-lang.org/2022/08/01/Increasing-glibc-kernel-requirements.html
   dependency 'pydantic-core-py3'
@@ -214,7 +214,7 @@ build do
 
     # We need to explicitly specify RUSTFLAGS for libssl and libcrypto
     # See https://github.com/pyca/cryptography/issues/8614#issuecomment-1489366475
-    if redhat_target? && !arm_target?
+    if redhat? && !arm_target?
         nix_specific_build_env["cryptography"] = nix_build_env.merge(
             {
                 "RUSTFLAGS" => "-C link-arg=-Wl,-rpath,#{install_dir}/embedded/lib",
