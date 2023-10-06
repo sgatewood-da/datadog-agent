@@ -54,5 +54,5 @@ func loadBundleZipProfiles() (profileConfigMap, error) {
 }
 
 func getGZipFilePath() string {
-	return getProfileConfdRoot(filepath.Join(userProfilesFolder, profilesZipFile))
+	return getProfileConfdRoot(filepath.Join(userProfilesFolder, profilesJsonGzipFile))
 }
