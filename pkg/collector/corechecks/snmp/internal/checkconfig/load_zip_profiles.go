@@ -27,7 +27,7 @@ func loadZipProfiles() (profileConfigMap, error) {
 		return nil, err
 	}
 	fmt.Printf("CONTENT: %s\n", string(all))
-	downloadedProfiles := profiledefinition.DownloadProfilesResponse{}
+	downloadedProfiles := profiledefinition.ProfileBundleResponse{}
 	err = json.Unmarshal(all, &downloadedProfiles)
 	if err != nil {
 		return nil, err
