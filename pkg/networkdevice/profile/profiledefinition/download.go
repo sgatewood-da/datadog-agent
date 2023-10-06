@@ -7,5 +7,6 @@ type DownloadProfileItem struct {
 
 // DownloadProfilesResponse represent a list of profiles meant to be downloaded by user.
 type DownloadProfilesResponse struct {
-	Profiles []DownloadProfileItem `json:"profiles"`
+	DownloadedAt string                `json:"downloaded_at"`
+	Profiles     []DownloadProfileItem `json:"profiles"`
 }
