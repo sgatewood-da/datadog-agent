@@ -8,4 +8,4 @@
 ---
 features:
   - |
-    [corechecks/snmp] Consume downloaded profiles
+    [corechecks/snmp] Load downloaded profiles
