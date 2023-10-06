@@ -496,8 +496,6 @@ func NewCheckConfig(rawInstance integration.Data, rawInitConfig integration.Data
 	}
 	c.Profiles = profiles
 
-	log.Warnf("available profiles: %#v", profiles)
-
 	// profile configs
 	profile := instance.Profile
 	if profile != "" || len(instance.Metrics) > 0 {

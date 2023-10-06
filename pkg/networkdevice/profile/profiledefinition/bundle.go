@@ -2,7 +2,7 @@ package profiledefinition
 
 // ProfileEntry represent a profile entry with metadata.
 type ProfileEntry struct {
-	// TODO: Metadata can be added here later
+	// Metadata can be added here later
 	Profile ProfileDefinition `json:"profile"`
 }
 
